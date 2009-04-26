@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="net.peterd.zombierun"
+    android:versionCode="7" android:versionName="1.0.2">
+    <!-- The version code MUST be kept in sync with the version code stored in ApplicationConstants -->
+  <application
+      android:icon="@drawable/icon"
+      android:label="@string/app_name"
+      android:theme="@android:style/Theme.NoTitleBar">
+    <activity android:name=".activity.Main"
+              android:label="@string/app_name">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+    
+    <!-- Alphabetical -->
+    <activity android:name=".activity.About" android:label="About" />
+    <activity android:name=".activity.JoinMultiPlayerGame" android:label="JoinMultiPlayerGame" />
+    <activity android:name=".activity.MainMenuWithMultiplayerDisabled" android:label="MainMenu_WithMultiplayerDisabled" />
+    <activity android:name=".activity.MainMenuWithMultiplayerEnabled" android:label="MainMenu_WithMultiplayerEnabled" />
+    <activity android:name=".activity.MultiPlayerEntry" android:label="MultiPlayerEntry" />
+    <activity android:name=".activity.MultiPlayerGame" android:label="MultiPlayerGame" />
+    <activity android:name=".activity.OwnedMultiPlayerGame" android:label="OwnedMultiPlayerGame" />
+    <activity android:name=".activity.SinglePlayerEntry" android:label="SinglePlayerEntry" />
+    <activity android:name=".activity.SinglePlayerGame" android:label="SinglelayerGame" />
+    <activity android:name=".activity.StartGame" android:label="StartGame" />
+    <activity android:name=".activity.StartGame$WaitingForFirstFixActivity" android:label="StartGame_WaitingForFirstFix" />
+    <activity android:name=".activity.StartGame$ShowingPickDestinationMessageActivity" android:label="StartGame_ShowingPickDestinationMessage" />
+    <activity android:name=".activity.StartGame$PickingDestinationActivity" android:label="StartGame_PickingDestination" />
+    <activity android:name=".activity.WinOrLoseGame" android:label="WinOrLoseGame" />
+    <uses-library android:name="com.google.android.maps" />
+  </application>
+	<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+	<uses-permission android:name="android.permission.VIBRATE" />
+	<uses-permission android:name="android.permission.INTERNET" />
+</manifest> 
