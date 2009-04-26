@@ -1,0 +1,8 @@
+application: zombie-run-game-server
+version: 1
+runtime: python
+api_version: 1
+
+handlers:
+- url: .*
+  script: main.py

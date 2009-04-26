@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+  <!-- Menu items and contents of resulting dialog boxes -->
+	<string name="menu_pause">Pause</string>
+  <string name="menu_stop">Just Give up and Die</string>
+  <string name="menu_my_location">My Location</string>
+  <string name="menu_map_view">Map</string>
+  <string name="menu_satellite_view">Satellite</string>
+  <string name="confirm_menu_stop">The horror, was it too much for you?</string>
+  <string name="paused">The whole world\'s paused!  How\'d you do that?</string>
+	<string name="resume">Resume Life</string>
+
+  <!-- Start of game dialog alert messages -->
+	<string name="waiting_for_location">Waiting for an accurate location...  You need to be outside with a clear view of the sky.  This may take a couple minutes.</string>
+	<string name="message_pick_destination">Tap on the map to pick your destination.</string>
+	<string name="message_confirm_destination">Was that the destination you meant to choose?</string>
+
+  <!-- Hardware capability error messages -->
+  <string name="error_no_gps">No GPS Device Found.</string>
+  <string name="error_gps_disabled">ZombieRun requires GPS-level location information.  Your GPS device is disabled.  Please enable your GPS receiver.</string>
+  <string name="enable_gps">Enable GPS</string>
+  <string name="error_no_vibrator">Could not find phone vibrator.  Ack!  WTF!  I can't work in this environment.</string>
+
+  <!-- Winning and losing strings -->
+  <string name="message_win">Survival!</string>
+  <string name="message_lose">AAAH!  Braaaaaains!</string>
+
+  <!-- Main menu strings -->  
+  <string name="app_name">Zombie, Run!</string>
+  <string name="header_singleplayer_entry">Single Player Game</string>
+  <string name="header_multiplayer_entry">Multiplayer Game</string>
+  <string name="spinner_zombie_count_text">Type of Outbreak (zombie density)</string>
+  <string name="spinner_zombie_speed_text">Type of Zombie (zombie speed)</string>
+  <string name="singleplayer_game_entry_button_text">Start Single Player Game</string>
+  <string name="multiplayer_game_entry_button_text">Start Multiplayer Game</string>
+  <string name="start_game_button_text">Start Single Player Game</string>
+  <string name="start_multiplayer_game_button_text">Create New Multi Player Game</string>
+  <string name="join_multiplayer_game_button_text">Join Multi Player Game</string>
+  <string name="help_button_text">Help</string>
+  
+  <!--  Strings for the update checker -->
+  <string name="update_available">A new version of ZombieRun is available.</string>
+  <string name="do_update">Update now!</string>
+  <string name="remind_me_later">Later!</string>
+</resources>
