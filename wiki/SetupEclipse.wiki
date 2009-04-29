@@ -1,0 +1,32 @@
+#Setup instructions to get Zombie, Run! working in Eclipse
+
+= Introduction =
+
+This is a guide to help getting started on using Eclipse and working on Zombie, Run!.  This is not meant to be exhaustive but simply a quick cheat sheet guide to getting up and running as quickly as possible.
+
+= Getting started =
+
+First follow the instructions on the Google Android setup page.  (Example: http://developer.android.com/sdk/1.5_r1/installing.html).  This typically works as advertised.
+
+Some possible issues:
+  * Change the available software site from https://dl-ssl.google.com/android/eclipse/ to http://dl-ssl.google.com/android/eclipse/ (Notice http, not https)
+  * If you have gcj (Gnu Java Compiler) you will need to install the sun java.  For debian: make sure you have non-free in your apt/sources.list file and then *apt-get install sun-java6-jdk sun-java6-jre*.  Then run *update-alternatives --config java* and choose the new Sun package.
+  * Note: with the 1.5 SDK I received some problems about Android Ping and something about a crash.  Just ignore that and continue... everything seems to work fine.  My understanding is that is a check for Usage statistics and is not important.
+
+= Load the project =
+
+After you have downloaded the code via svn you can load the project into Eclipse.
+
+  # File->New->Other...   (or CTRL+N)
+  # Android->Android Project (click Next)
+  # Choose Create Project from Existing Source
+  # Choose the base directory for ZombieRun from the SVN checkout repository.  This should be the directory that contains the AndroidManifest.xml file.
+  # Set the Project Name to ZombieRun and pick the SDK build target (Eg. 1.5)
+
+This should load the project up in your editor.
+
+== Getting Google Maps ==
+
+Zombie, Run! also requires that you have the google maps libraries installed.
+
+(TODO: Finish documenting adding the libraries)
