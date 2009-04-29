@@ -21,12 +21,12 @@ After you have downloaded the code via svn you can load the project into Eclipse
   # Android->Android Project (click Next)
   # Choose Create Project from Existing Source
   # Choose the base directory for ZombieRun from the SVN checkout repository.  This should be the directory that contains the AndroidManifest.xml file.
-  # Set the Project Name to ZombieRun and pick the SDK build target (Eg. 1.5)
+  # Set the Project Name to ZombieRun and pick the SDK build target. *You must pick Google API*.  With v1.5 of the SDK the maps API is seperate.  Picking Google API will include 1.5 and the the mapping libraries.
 
 This should load the project up in your editor.
 
-== Getting Google Maps ==
+== Troubleshooting ==
 
-Zombie, Run! also requires that you have the google maps libraries installed.
+*errors when including com.google.android.maps...*
 
-(TODO: Finish documenting adding the libraries)
+This is because the new SDK requires the Google APIs to be listed as a build target.  To modify (or upgrade) your project after getting the latest SDK you can right click on your project name in Package Explorer and choose Properties.  Here you can modify your build target.
