@@ -1,4 +1,4 @@
-#Setup instructions to get Zombie, Run! working in Eclipse
+#summary Setup instructions to get Zombie, Run! working in Eclipse
 
 = Introduction =
 
