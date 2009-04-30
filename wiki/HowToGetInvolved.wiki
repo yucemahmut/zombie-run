@@ -8,6 +8,8 @@ Feel free to checkout the current code, which includes the multiplayer game serv
 
 If you are new to android development you may want to start with our guide on [SetupEclipse Setting up Eclipse] with Zombie, Run!
 
+Be sure you have read the [DevelopmentGuidelines Development Guidelines] before you start coding!
+
 ==Discussion==
 
 Development discussion takes place on the Zombie, Run! Development mailing list: http://groups.google.com/group/zombie-run-dev
