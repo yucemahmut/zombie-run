@@ -21,7 +21,6 @@ function Game(map) {
   }
   
   this.locationChanged = function(position) {
-    alert("Location changed.");
     if (!first_location_fixed) {
       return;
     }
