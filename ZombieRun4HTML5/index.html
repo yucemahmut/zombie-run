@@ -1,0 +1,68 @@
+<html>
+<head>
+  <!--
+  <script src="http://maps.google.com/maps?file=api&v=2&sensor=false&key=ABQIAAAA7aUS4fSHQyPErFirNWx0EBQ7EXyB-Iz7___ctIfHKdL0mbThSRTqvPMaD9-A59_Ew92KOG7-B0796Q" type="text/javascript"></script>
+  -->
+  <script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=true"></script>
+  <script type="text/javascript" src="js/util.js"></script>
+  <script type="text/javascript" src="js/player.js"></script>
+  <script type="text/javascript" src="js/zombie.js"></script>
+  <script type="text/javascript">
+    var map = false;
+    var person;
+    var zombie;
+    
+    function locationError(error) {
+      alert("location error: " + error.message);
+    }
+
+    function initializeGame(position) {
+      var latlng = latLngFromPosition(position);
+      var myOptions = {
+        zoom: 13,
+        center: latlng,
+        mapTypeId: google.maps.MapTypeId.ROADMAP
+      };
+      map = new google.maps.Map(document.getElementById("map"), myOptions);
+      person = new Player(map, latlng);
+      var zombieLatLng = latLngTowardTarget(latlng, new google.maps.LatLng(100, 100), 50);
+      zombie = new Zombie(map, zombieLatLng);
+    }
+    
+    function shutdownGame() {
+      map = false;
+    }
+    
+    function locationChanged(position) {
+      if (map == false) {
+        return;
+      }
+      person.locationChanged(position);
+      zombie.locationChanged(position);
+    }
+
+    function initialize() {
+      // Get our intial position, and initialize the map at that point.
+      navigator.geolocation.getCurrentPosition(initializeGame,
+          locationError,
+          { enableHighAccuracy:true, maximumAge:0, timeout:0 });
+
+      // Get updates of the user's location at least every 10 seconds.
+      navigator.geolocation.watchPosition(locationChanged,
+          locationError,
+          { enableHighAccuracy:true, maximumAge: 10 * 1000, timeout:0 });
+    }
+  </script>
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+
+  <style type="text/css">
+    body {
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+</head>
+<body onload="initialize()" onorientationchange="initialize()">
+  <div id="map" style="width:100%; height:100%"></div>
+</body>
