@@ -1,8 +1,3 @@
-
-// Player constructor.
-//
-// map is the google.maps.Map on which this player will be drawn
-// location is a google.maps.LatLng
 function Player(map, location) {
   this._map = map;
   this._location = location;
