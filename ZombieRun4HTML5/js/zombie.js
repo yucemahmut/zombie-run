@@ -1,20 +1,22 @@
-function Zombie(map, location) {
-  this._map = map;
-  this._location = location;
+var Zombie = Class.create({
+  initialize: function(map, location) {
+    this.map = map;
+    this.location = location;
     
-  var markerimage = new google.maps.MarkerImage(
-      "res/zombie_meandering.png",
-      new google.maps.Size(14, 30));
-  this._marker = new google.maps.Marker({
-      position:location,
-      map:map,
-      title:"Zombie",
-      icon:markerimage,
-      // TODO: shadow image.
-    });
-}
-
-Zombie.prototype.locationChanged = function(position) {
-  this._location = latLngFromPosition(position);
-  this._marker.set_position(this._location);
-}
+    var markerimage = new google.maps.MarkerImage(
+        "res/zombie_meandering.png",
+        new google.maps.Size(14, 30));
+    this.marker = new google.maps.Marker({
+        position:this.location,
+        map:this.map,
+        title:"Zombie",
+        icon:markerimage,
+        // TODO: shadow image.
+      });
+  },
+  
+  locationChanged: function(latLng) {
+    this.location = latLng;
+    this.marger.set_position(this.location);
+  }
+});
