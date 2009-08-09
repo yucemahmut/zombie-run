@@ -47,11 +47,14 @@ function latLngTowardTarget(origin, target, distanceMeters) {
 var LocationProvider = Class.create({
   initialize: function() {
     this.listeners = new Array;
-    
-    if (navigator.geolocation.getCurrentPosition) {
+
+    if (navigator.geolocation) {
       this.initializeW3CLocationUpdates();
     } else if (window.google && google.gears) {
-      initializeGoogleGearsLocationUpdates();
+      this.initializeGoogleGearsLocationUpdates();
+    } else {
+      // TODO: create a more unified notification and error system.
+      alert("No location API.");
     }
   },
 
