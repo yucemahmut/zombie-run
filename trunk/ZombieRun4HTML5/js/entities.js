@@ -9,8 +9,9 @@ var Entity = Class.create({
     alert("please override me.");
   },
   
-  locationChanged: function(latLng) {
-    this.location = latLng;
+  locationUpdate: function(location) {
+    console.log(this + ".locationUpdate(" + location + ")");
+    this.location = location;
     this.marker.set_position(this.location);
   },
 });

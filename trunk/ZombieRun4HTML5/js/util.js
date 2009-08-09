@@ -37,3 +37,87 @@ function latLngTowardTarget(origin, target, distanceMeters) {
   offsetLng = dLon * distanceMeters / dist;
   return new google.maps.LatLng(origin.lat() + offsetLat, origin.lng() + offsetLng);
 }
+
+// A LocationProvider, when created, requests periodic location updates continuously and provides
+// them to all registered listeners.
+//
+// A listener should implement:
+//   function locationUpdate(location);
+// where location is of the type google.maps.LatLng
+var LocationProvider = Class.create({
+  initialize: function() {
+    this.listeners = new Array;
+    
+    if (navigator.geolocation.getCurrentPosition) {
+      this.initializeW3CLocationUpdates();
+    } else if (window.google && google.gears) {
+      initializeGoogleGearsLocationUpdates();
+    }
+  },
+
+  addListener: function(listener) {
+    this.listeners.push(listener);
+  },
+  
+  updateListeners: function(latLng) {
+    this.listeners.each(function(listener) {
+        listener.locationUpdate(latLng);
+      });
+  },
+  
+  
+  //
+  // W3C Location Handling
+  //
+  initializeW3CLocationUpdates: function() {
+    console.log("Getting location updates from the W3C location API.");
+
+    // Get our intial position, and initialize the map at that point.
+    navigator.geolocation.getCurrentPosition(
+        this.w3CLocationChanged.bind(this),
+        this.w3CLocationError.bind(this),
+        { enableHighAccuracy:true, maximumAge:0, timeout:0 });
+  
+    // Get updates of the user's location at least every 10 seconds.
+    navigator.geolocation.watchPosition(
+        this.w3CLocationChanged.bind(this),
+        this.w3CLocationError.bind(this),
+        { enableHighAccuracy:true, maximumAge: 10 * 1000, timeout:0 });
+  },
+  
+  // position is the object returned to the method from the navigator.geoLocation.getCurrentPosition
+  w3CLocationChanged: function(position) {
+    var latLng = latLngFromPosition(position);
+    console.log("w3CLocationChanged: " + latLng);
+    this.updateListeners(latLng);
+  },
+  
+  w3CLocationError: function(error) {
+    console.log("locationError: " + error.message);
+  },
+  
+
+  //
+  // Google Gears Location Handling
+  //
+  initializeGoogleGearsLocationUpdates: function() {
+    var geo = google.gears.factory.create('beta.geolocation');
+    if (geo.getPermission()) {
+      geo.watchPosition(this.googleGearsLocationChanged.bind(this),
+                        this.googleGearsLocationError.bind(this),
+                        { enableHighAccuracy: true });
+    }
+  },
+  
+  googleGearsLocationChanged: function(position) {
+    var latLng = new google.maps.LatLng(position.latitude, position.longitude);
+    console.log("googleGearsLocationChanged: " + latLng);
+    this.updateListeners(latLng);
+  },
+  
+  googleGearsLocationError: function(error) {
+    console.log("locationError: " + error.message);
+  },
+  
+  // TODO: provide a removeListener method?  Not needed yet.
+});
