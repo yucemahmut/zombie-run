@@ -1,54 +1,63 @@
-// map is the google.maps.Map on which this game will be drawn
-function Game(map, num_zombies) {
-  var map = map;
-  var first_location_fixed = false;
-  var player;  // a Player
-  var target;  // a google.maps.LatLng
-  var zombies;  // an array
-  var zombie_count = num_zombies;
+var Game = Class.create({
+  initialize: function(map, num_zombies) {
+    this.map = map;
+    this.num_zombies = num_zombies;
+    this.first_location_fixed = false;
+    this.zombies = new Array;
+  },
   
-  this.firstLocation = function(position) {
-    var location = latLngFromPosition(position);
-  
-    player = new Player(map, location);
-  
-    map.set_center(location);
-    map.set_zoom(15);
-    
-    first_location_fixed = true;
-    
-    google.maps.event.addListener(map, "click", function(mouseEvent) {
-        new Zombie(map, mouseEvent.latLng);
-      });
-    alert("Please select your destination");
-  }
-    
-  this.locationChanged = function(position) {
-    if (!first_location_fixed) {
-      return;
-    }
-    player.locationChanged(position);
-    for (var i; i < zombies.length; ++i) {
-      zombies[i].locationChanged(position);
-    }
-  }
-  
-  this.locationError = function(error) {
-    // TODO: Count errors, if there are enough then show the user an issue.
-    // alert("location error: " + error.message);
-  }
-  
-  this.initialize = function() {
+  // start the game -- initialize location services.
+  start: function() {
+    console.log("start");
     // Get our intial position, and initialize the map at that point.
     navigator.geolocation.getCurrentPosition(
-        this.firstLocation,
-        this.locationError,
+        this.firstLocation.bind(this),
+        this.locationError.bind(this),
         { enableHighAccuracy:true, maximumAge:0, timeout:0 });
   
     // Get updates of the user's location at least every 10 seconds.
     navigator.geolocation.watchPosition(
-        this.locationChanged,
-        this.locationError,
+        this.locationChanged.bind(this),
+        this.locationError.bind(this),
         { enableHighAccuracy:true, maximumAge: 10 * 1000, timeout:0 });
-  }
-}
+  },
+  
+  // position is the object returned to the method from the navigator.geoLocation.getCurrentPosition
+  locationChanged: function(position) {
+    console.log("locationChanged: " + latLngFromPosition(position));
+    if (!this.first_location_fixed) {
+      return;
+    }
+    this.player.locationChanged(position);
+    for (var i; i < this.zombies.length; ++i) {
+      this.zombies[i].locationChanged(position);
+    }
+  },
+  
+  locationError: function(error) {
+    console.log("locationError: " + error.message);
+    // TODO: Count errors, if there are enough then show the user an issue.
+    alert(error.message);
+  },
+  
+  // position is the object returned to the method from the navigator.geoLocation.getCurrentPosition
+  firstLocation: function(position) {
+    var location = latLngFromPosition(position);
+    console.log("firstLocation: " + location);
+  
+    this.player = new Player(this.map, location);
+  
+    this.map.set_center(location);
+    this.map.set_zoom(15);
+    
+    first_location_fixed = true;
+    
+    google.maps.event.addListener(this.map, "click", this.locationSelected.bind(this));
+  },
+  
+  locationSelected: function(mouseEvent) {
+    console.log("locationSelected: " + mouseEvent.latLng);
+    this.zombies.push(new Zombie(this.map, mouseEvent.latLng));
+    this.flag = new Flag(map, mouseEvent.latLng);
+  },
+});
