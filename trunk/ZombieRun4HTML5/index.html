@@ -8,14 +8,14 @@
   <script type="text/javascript" src="js/game.js"></script>
   <script type="text/javascript">
     function initialize() {
-      var myOptions = {
+      var mapOptions = {
         center: new google.maps.LatLng(0, 0),
         mapTypeId: google.maps.MapTypeId.ROADMAP,
         zoom: 1,
       };
-      var map = new google.maps.Map(document.getElementById("map"), myOptions);
+      var map = new google.maps.Map(document.getElementById("map"), mapOptions);
       var game = new Game(map);
-      game.initialize();
+      game.start();
     }
   </script>
   <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
