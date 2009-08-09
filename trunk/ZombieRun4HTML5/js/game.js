@@ -39,7 +39,8 @@ var Game = Class.create({
       this.map.set_center(location);
       this.map.set_zoom(15);
       
-      google.maps.event.addListener(this.map, "click", this.locationSelected.bind(this));
+      this.destinationPickClickListener =
+          google.maps.event.addListener(this.map, "click", this.locationSelected.bind(this));
     }
   },
   
@@ -51,6 +52,14 @@ var Game = Class.create({
     } else {
       this.destination = new Destination(this.map, latLng);
     }
-    // TODO: confirm destination.
+    // TODO: do a better confirmation dialog.
+    if (confirm("Right destination?")) {
+      google.maps.event.removeListener(this.destinationPickClickListener);
+      this.destinationConfirmed();
+    }
   },
+  
+  destinationConfirmed: function() {
+    // distribute zombies.
+  }
 });
