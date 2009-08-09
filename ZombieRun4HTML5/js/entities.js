@@ -44,3 +44,18 @@ var Zombie = Class.create(Entity, {
       });
   },
 });
+
+var Destination = Class.create(Entity, {
+  getMarker: function(latLng) {
+    var markerimage = new google.maps.MarkerImage(
+        "res/flag.png",
+        new google.maps.Size(62, 35));
+    return new google.maps.Marker({
+        position:this.location,
+        map:this.map,
+        title:"Destination",
+        icon:markerimage,
+        // TODO: shadow image.
+      });
+  },
+});
