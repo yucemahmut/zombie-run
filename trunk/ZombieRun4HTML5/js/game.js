@@ -28,20 +28,22 @@ var Game = Class.create({
   
   // position is the object returned to the method from the navigator.geoLocation.getCurrentPosition
   locationUpdate: function(location) {
-    if (!this.first_location_fixed) {
-      console.log("first location: " + location);
-      // TODO: this is where removing a location listener would be useful.
-      this.first_location_fixed = true;
+    console.log("first location: " + location);
+    this.locationProvider.removeListener(this);
+
+    if (this.first_location_fixed) {
+      throw "Invalid state -- Game should receive only one location update, then remove itself.";
+    }    
+    this.first_location_fixed = true;
+  
+    this.player = new Player(this.map, location);
+    this.locationProvider.addListener(this.player);
+  
+    this.map.set_center(location);
+    this.map.set_zoom(15);
     
-      this.player = new Player(this.map, location);
-      this.locationProvider.addListener(this.player);
-    
-      this.map.set_center(location);
-      this.map.set_zoom(15);
-      
-      this.destinationPickClickListener =
-          google.maps.event.addListener(this.map, "click", this.locationSelected.bind(this));
-    }
+    this.destinationPickClickListener =
+        google.maps.event.addListener(this.map, "click", this.locationSelected.bind(this));
   },
   
   locationSelected: function(mouseEvent) {
