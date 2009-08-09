@@ -48,6 +48,10 @@ var LocationProvider = Class.create({
   initialize: function() {
     this.listeners = new Array;
 
+    // TODO: both of these initialization methods should return a boolean value indicating whether
+    // or not they were able to successfully start requesting location updates (i.e., if we were
+    // given permission to get location updates by the user).  If not, we should handle that error
+    // condition with some notifications.
     if (navigator.geolocation) {
       this.initializeW3CLocationUpdates();
     } else if (window.google && google.gears) {
@@ -60,6 +64,17 @@ var LocationProvider = Class.create({
 
   addListener: function(listener) {
     this.listeners.push(listener);
+  },
+  
+  removeListener: function(listener) {
+    // There's gotta be a better way to do this...
+    var subtractedListeners = new Array;
+    this.listeners.each(function(l) {
+        if (l != listener) {
+          subtractedListeners.push(l);
+        }
+      });
+    this.listeners = subtractedListeners;
   },
 
   // TODO: provide a removeListener method
