@@ -1,0 +1,20 @@
+Notes on testing:
+
+The HTML5 version of Zombie, Run! can be developed in:
+
+  Firefox 3.5 (which has support for the W3C location API) - this tests the iPhone.
+  Safari 4.0 with Google Gears (wherein it does not have support for the W3C location API, but
+    does support the Gears location API) - this tests the Android platform.
+
+and should always be verified in:
+
+  iPhone OS 3.0 on a G3, ideally also on a G3S
+  The current version of Android on a G1, ideally also on a Hero
+
+
+
+Functional Testing Plan:
+
+On all platforms,
+ * Start-new-game works.
+ * Rejecting location access shows an appropriate error message.
