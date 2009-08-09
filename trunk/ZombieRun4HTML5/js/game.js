@@ -56,8 +56,13 @@ var Game = Class.create({
   },
   
   locationSelected: function(mouseEvent) {
-    console.log("locationSelected: " + mouseEvent.latLng);
-    this.zombies.push(new Zombie(this.map, mouseEvent.latLng));
-    this.flag = new Flag(map, mouseEvent.latLng);
+    var latLng = mouseEvent.latLng;
+    console.log("locationSelected: " + latLng);
+    if (this.destination) {
+      this.destination.locationChanged(latLng);
+    } else {
+      this.destination = new Destination(this.map, latLng);
+    }
+    // confirm destination.
   },
 });
