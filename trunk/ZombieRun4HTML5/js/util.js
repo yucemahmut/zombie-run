@@ -58,6 +58,8 @@ var LocationProvider = Class.create({
   addListener: function(listener) {
     this.listeners.push(listener);
   },
+
+  // TODO: provide a removeListener method
   
   updateListeners: function(latLng) {
     this.listeners.each(function(listener) {
@@ -102,10 +104,17 @@ var LocationProvider = Class.create({
   //
   initializeGoogleGearsLocationUpdates: function() {
     var geo = google.gears.factory.create('beta.geolocation');
-    if (geo.getPermission()) {
+    var options = { enableHighAccuracy: true };
+    try {
+      geo.getCurrentPosition(this.googleGearsLocationChanged.bind(this),
+                             this.googleGearsLocationError.bind(this),
+                             options);
       geo.watchPosition(this.googleGearsLocationChanged.bind(this),
                         this.googleGearsLocationError.bind(this),
-                        { enableHighAccuracy: true });
+                        options);
+    } catch (e) {
+      alert(e);
+      return;
     }
   },
   
@@ -118,6 +127,4 @@ var LocationProvider = Class.create({
   googleGearsLocationError: function(error) {
     console.log("locationError: " + error.message);
   },
-  
-  // TODO: provide a removeListener method?  Not needed yet.
 });
