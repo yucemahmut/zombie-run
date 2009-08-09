@@ -1,25 +1,28 @@
 // map is the google.maps.Map on which this game will be drawn
-function Game(map) {
+function Game(map, num_zombies) {
   var map = map;
   var first_location_fixed = false;
-  var player = false;
-  var zombies = false;
+  var player;  // a Player
+  var target;  // a google.maps.LatLng
+  var zombies;  // an array
+  var zombie_count = num_zombies;
   
   this.firstLocation = function(position) {
     var location = latLngFromPosition(position);
   
     player = new Player(map, location);
   
-    var zombieLatLng = latLngTowardTarget(location, new google.maps.LatLng(100, 100), 50);
-    zombies = new Array();
-    zombies[0] = new Zombie(map, zombieLatLng);
-    
     map.set_center(location);
     map.set_zoom(15);
     
     first_location_fixed = true;
+    
+    google.maps.event.addListener(map, "click", function(mouseEvent) {
+        new Zombie(map, mouseEvent.latLng);
+      });
+    alert("Please select your destination");
   }
-  
+    
   this.locationChanged = function(position) {
     if (!first_location_fixed) {
       return;
@@ -32,7 +35,7 @@ function Game(map) {
   
   this.locationError = function(error) {
     // TODO: Count errors, if there are enough then show the user an issue.
-    alert("location error: " + error.message);
+    // alert("location error: " + error.message);
   }
   
   this.initialize = function() {
