@@ -4,6 +4,7 @@ var Game = Class.create({
     this.num_zombies = num_zombies;
     this.first_location_fixed = false;
     this.zombies = new Array;
+    this.players = new Array;
   },
   
   // start the game -- initialize location services.
@@ -26,7 +27,6 @@ var Game = Class.create({
         { enableHighAccuracy:true, maximumAge: 10 * 1000, timeout:0 });
   },
   
-  // position is the object returned to the method from the navigator.geoLocation.getCurrentPosition
   locationUpdate: function(location) {
     console.log("first location: " + location);
     this.locationProvider.removeListener(this);
@@ -38,6 +38,7 @@ var Game = Class.create({
   
     this.player = new Player(this.map, location);
     this.locationProvider.addListener(this.player);
+    this.players.push(this.player);
   
     this.map.set_center(location);
     this.map.set_zoom(15);
@@ -62,6 +63,18 @@ var Game = Class.create({
   },
   
   destinationConfirmed: function() {
-    // distribute zombies.
-  }
+    var pLoc = this.player.getLocation();
+    var dLoc = this.destination.getLocation();
+    var dst = distance(pLoc, dLoc);
+    var centerLoc = latLngTowardTarget(pLoc, dLoc, dst / 2);
+    
+    for (i = 0; i < this.num_zombies; i++) {
+      var randLat = centerLoc.lat() + Math.random() - 0.5;
+      var randLng = centerLoc.lng() + Math.random() - 0.5;
+      var randLoc = new google.maps.LatLng(randLat, randLng);
+      var zombieLoc = latLngTowardTarget(centerLoc, randLoc, Math.random() * dst);
+      var zombie = new Zombie(this.map, zombieLoc, this.players, 0.5, 100);
+      this.zombies.push(zombie);
+    }
+  },
 });
