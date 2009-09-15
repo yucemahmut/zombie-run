@@ -67,12 +67,10 @@ var Game = Class.create({
     var dLoc = this.destination.getLocation();
     var dst = distance(pLoc, dLoc);
     var centerLoc = latLngTowardTarget(pLoc, dLoc, dst / 2);
+    console.log("center: " + centerLoc);
     
     for (i = 0; i < this.num_zombies; i++) {
-      var randLat = centerLoc.lat() + Math.random() - 0.5;
-      var randLng = centerLoc.lng() + Math.random() - 0.5;
-      var randLoc = new google.maps.LatLng(randLat, randLng);
-      var zombieLoc = latLngTowardTarget(centerLoc, randLoc, Math.random() * dst);
+      var zombieLoc = randomLatLngNearLocation(centerLoc, Math.random() * dst * 2);
       var zombie = new Zombie(this.map, zombieLoc, this.players, 0.5, 100);
       this.zombies.push(zombie);
     }
