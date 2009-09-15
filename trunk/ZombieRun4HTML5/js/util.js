@@ -38,6 +38,23 @@ function latLngTowardTarget(origin, target, distanceMeters) {
   return new google.maps.LatLng(origin.lat() + offsetLat, origin.lng() + offsetLng);
 }
 
+// Get a random latitude and longitude near the given point.
+function randomLatLngNearLocation(origin, distanceMeters) {
+  var randLat = origin.lat() + Math.random() - 0.5;
+  var randLng = origin.lng() + Math.random() - 0.5;
+  var targetLoc = new google.maps.LatLng(randLat, randLng);
+  return latLngTowardTarget(origin, targetLoc, distanceMeters);
+}
+
+var zombiePopulator = Class.create({
+  // map: the map.
+  // start: The location that the game is starting from.
+  // destination: 
+  initialize: function(map, start, destination, averageZombieSpeed, zombieDensity) {
+  
+  },
+});
+
 // A LocationProvider, when created, requests periodic location updates continuously and provides
 // them to all registered listeners.
 //
