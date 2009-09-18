@@ -1,0 +1,18 @@
+<html>
+  <body>
+    {% if login %}
+      <a href="{{ login }}">Login</a>
+    {% endif %}
+    {% if logout %}
+      <a href="{{ logout }}">Logout</a>
+    {% endif %}
+    <br />
+
+    Games:<br />
+    {% if games %}
+      {% for game in games %}
+        <a href="/game?gid={{ game.Id }}">{{ game.last_update_time }}</a><br />
+      {% endfor %}
+    {% endif %}
+  </body>
+</html>
