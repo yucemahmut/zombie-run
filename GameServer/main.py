@@ -1,24 +1,28 @@
+import logging
 import wsgiref.handlers
 
+from controllers import admin
 from controllers import gamestate
+from google.appengine.api import users
 from google.appengine.ext import webapp
 
 
-class MainHandler(webapp.RequestHandler):
-
-  def get(self):
-    self.response.out.write('Hello world!')
+URL_BINDINGS = [ 
+                 ('/', admin.IndexPageHandler),
+                 ('/rpc/create', gamestate.CreateHandler),
+                 ('/rpc/get', gamestate.GetHandler),
+                 ('/rpc/join', gamestate.JoinHandler),
+                 ('/rpc/put', gamestate.PutHandler),
+                 ('/rpc/start', gamestate.StartHandler),
+               ]
+REVERSE_URL_BINDINGS = {}
 
 
 def GetApplication():
+  for (url, clazz) in URL_BINDINGS:
+    REVERSE_URL_BINDINGS[clazz] = url
   return webapp.WSGIApplication(
-      [ ('/', MainHandler),
-        ('/game/create', gamestate.CreateHandler),
-        ('/game/get', gamestate.GetHandler),
-        ('/game/join', gamestate.JoinHandler),
-        ('/game/put', gamestate.PutHandler),
-        ('/game/start', gamestate.StartHandler),
-        ],
+      URL_BINDINGS,
       debug=True)
 
 

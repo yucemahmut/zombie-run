@@ -1,18 +1,24 @@
+import logging
 import random
 import wsgiref.handlers
 import yaml
+from django.utils import simplejson as json
+from models.game import Destination
 from models.game import Game
+from models.game import Player
+from models.game import Zombie
+from google.appengine.api import users
 from google.appengine.ext import db
 from google.appengine.ext import webapp
 
 
 GAME_ID_PARAMETER = "gid"
-PLAYER_ID_PARAMETER = "pid"
-PLAYER_DATA_PARAMETER = "pd"
-DESTINATION_PARAMETER = "d"
-ZOMBIES_PARAMETER = "z"
-SECRET_KEY_PARAMETER = "s"
-OWNER_PLAYER_ID = 0
+LATITUDE_PARAMETER = "lat"
+LONGITUDE_PARAMETER = "lon"
+NUMBER_OF_ZOMBIES_PARAMETER = "num_zombies"
+AVERAGE_SPEED_OF_ZOMBIES_PARAMETER = "average_zombie_speed"
+ZOMBIE_SPEED_VARIANCE = 0.2
+
 
 class Error(Exception):
   """Base error."""
@@ -24,31 +30,21 @@ class MalformedRequestError(Error):
 class GameNotFoundError(Error):
   """The game was not found."""
 
-class AuthorizationError(Error):
-  """The attempted operation was not authorized."""
-
-class SecretKeyMismatchError(AuthorizationError):
-  """The provided secret key did not match the stored key for the game id."""
-
 class GameStartedError(Error):
   """The game has already started, precluding the attempted operation."""
+  
+class GameStateError(Error):
+  """There was some error in the game's state."""
+
+class AuthorizationError(Error):
+  """The current user was not allowed to execute this action."""
 
 
 class GameHandler(webapp.RequestHandler):
-
-  _secret_key_upper_bound = 2**128
-
-  def get(self):
-    self.response.set_status(403, 'All requests must be POSTed.')
-
-  def CreateNewSecretKey(self):
-    """Generate a 128-bit hex-encoded secret key."""
-    game_id_int = random.randint(0, self._secret_key_upper_bound)
-    game_id_hex = hex(game_id_int)
-    # Cut off the first two characters of the hex-encoded game id, which is
-    # always "0x"
-    return game_id_hex[2:]
   
+  def __init__(self):
+    self.game = None
+
   def GetGameKeyName(self, game_id):
     """For a given game id, get a string representing the game's key name.
     
@@ -60,7 +56,7 @@ class GameHandler(webapp.RequestHandler):
     """
     return "g%d" % game_id
   
-  def GetGame(self, game_id=None, validate_secret_key=True):
+  def GetGame(self, game_id=None, authorize=True):
     """Determines the game id and retreives the game data from the db.
     
     Args:
@@ -75,9 +71,10 @@ class GameHandler(webapp.RequestHandler):
           request.
       GameNotFoundError: If the provided game id is not present in the
           datastore.
-      SecretKeyMismatchError: If the provided secret key does not match that in
-          the datastore.
     """
+    if self.game:
+      return self.game
+    
     if game_id is None:
       try:
         # Try to get and parse an integer from the game id parameter.
@@ -89,58 +86,67 @@ class GameHandler(webapp.RequestHandler):
         raise MalformedRequestError("Game id not present in request or not an "
                                     "integer value.")
 
-    game_data = Game.get_by_key_name(self.GetGameKeyName(game_id))
-    if game_data is None:
+    game = Game.get_by_key_name(self.GetGameKeyName(game_id))
+    if game is None:
       raise GameNotFoundError()
-    
-    if validate_secret_key:
-      secret_key = self.request.get(SECRET_KEY_PARAMETER, None)
-      if secret_key is None:
-        raise MalformedRequestError("Secret key not present in request.")
 
-      player_id = self.request.get(PLAYER_ID_PARAMETER, None)
-      try:
-        player_id_int = int(player_id)
-      except ValueError, e:
-        raise MalformedRequestError("Player ID not an integer.")
-      except TypeError, e:
-        raise MalformedRequestError("Player ID not an integer.")
-      if player_id is None:
-        raise MalformedRequestError("Player ID not present in request.")
-      
-      recorded_secret_key = None
-      if len(game_data.secret_keys) < player_id_int:
-        raise MalformedRequestError("Player ID not valid, must be < %d" %
-                                    len(game_data.players))
-      recorded_secret_key = game_data.secret_keys[player_id_int]
-      if recorded_secret_key != secret_key:
-        raise SecretKeyMismatchError()
+    if authorize:
+      self.Authorize(game)
     
-    return game_data
+    self.game = game
+    return game
+
+  def Authorize(self, game):
+    user = users.get_current_user()
+    if not user:
+      raise AuthorizationError("Request to get a game by a non-logged-in-user.")
+    else:
+      authorized = False
+      for player in game.Players():
+        if player.Email() == user.email():
+          authorized = True
+          break
+      if not authorized:
+        raise AuthorizationError(
+            "Request to get a game by a user who is not part of the game "
+            "(unauthorized user: %s)." % user.email())
   
-  def Output(self, dictionary):
-    """Write the provided dictionary of key-value pairs to output."""
+  def OutputGame(self, game):
+    """Write the game data to the output, serialized as YAML.
+    
+    Args:
+      game: The Game that should be written out.
+    """
+    dictionary = {}
+    dictionary["game_id"] = game.Id()
+    
+    dictionary["players"] = []
+    for player_str in game.players:
+      player_dict = json.loads(player_str)
+      dictionary["players"].append(player_dict)
+      
+    dictionary["zombies"] = []
+    for zombie_str in game.zombies:
+      zombie_dict = json.loads(zombie_str)
+      dictionary["zombies"].append(zombie_dict)
+    
+    if game.destination is not None:
+      destination_dict = json.loads(game.destination)
+      dictionary["destination"] = destination_dict
+    
+    self.Output(json.dumps(dictionary))
+  
+  def Output(self, output):
+    """Write the game to output."""
     self.response.headers["Content-Type"] = "text/plain; charset=utf-8"
-    lines = []
-    for key in dictionary:
-      value = dictionary[key]
-      if value is None or value == "None":
-        continue
-      elif hasattr(value, "__iter__"):
-        for v in value:
-          lines.append("%s[]:%s" % (key, str(v)))
-      else:
-        lines.append("%s:%s" % (key, str(value)))
-    self.response.out.write("\n".join(lines))
+    logging.debug("Response: %s" % output)
+    self.response.out.write(output)
 
 
 class JoinHandler(GameHandler):
   """Handles players joining an unstarted game."""
   
   def get(self):
-    self.post()
-    
-  def post(self):
     """Adds a player to the game.
     
     GAME_ID_PARAMETER must be present in the request and in the datastore.
@@ -148,13 +154,18 @@ class JoinHandler(GameHandler):
     Adds the player to the game with a blank initial entry, returning the
     player's id and the game's secret key.
     """
-    game = db.run_in_transaction(self.AddPlayerToGame)
-    player_id = len(game.players) - 1
-    self.Output({"player_id": player_id,
-                 "secret": str(game.secret_keys[player_id]),
-                 "destination": str(game.destination)})
+    def Join():
+      game = self.GetGame(authorize=False)
+      user = users.get_current_user()
+      
+      if user:
+        game = self.AddPlayerToGame(game, user)
+      return game
+    
+    game = db.RunInTransaction(Join)
+    self.OutputGame(game)
 
-  def AddPlayerToGame(self, game_id=None):
+  def AddPlayerToGame(self, game, user):
     """Retreive the game with the provided id and add a player.
     
     Returns:
@@ -162,12 +173,14 @@ class JoinHandler(GameHandler):
       end of the list of players.  The new player's id will be
       len(game.players) - 1 (the array index of the newest player.
     """
-    game = self.GetGame(game_id=game_id, validate_secret_key=False)
-    if game.started:
-      raise GameStartedError("Cannot join game already in progress.")
-    game.players.append(db.Text())
-    game.secret_keys.append(db.Text(self.CreateNewSecretKey()))
+    for player in game.Players():
+      if player.Email() == user.email():
+        return game
+    
+    player = Player(user=user)
+    game.AddPlayer(player)
     game.put()
+    
     return game
 
 
@@ -182,83 +195,131 @@ class CreateHandler(JoinHandler):
     repeat.  If no, write a Game entry to the datastore with that game id
     and return that id in the response content.
     """
-    def CreateNewGameIfAbsent(game_id, destination):
+    user = users.get_current_user()
+    if user:
+      game = self.CreateGame()
+      self.AddPlayerToGame(game, user)
+      game.put()
+      self.OutputGame(game)
+    else:
+      raise AuthorizationError("Cannot join a game if you aren't a logged-in "
+                               "user.")  
+  def CreateGame(self):
+    def CreateNewGameIfAbsent(game_id):
       game_key = self.GetGameKeyName(game_id)
       if Game.get_by_key_name(game_key) is None:
-        Game(key_name=game_key,
-             started=False,
-             destination=destination).put()
-        return True
-      return False
-     
+        game = Game(key_name=game_key)
+        game.put()
+        return game
+      return None
+
     magnitude = 9999
     game_id = None
-    destination = self.request.get(DESTINATION_PARAMETER, None)
-    if destination is None:
-      raise MalformedRequestError("A game must have a destination when it's created.");
-    
-    while True:
+    game = None
+    while game is None:
       # TODO: Limit this to not blow up the potential size of a game id to an
       # arbitrarily large number.
       game_id = random.randint(0, magnitude)
-      if db.run_in_transaction(CreateNewGameIfAbsent,
-                               game_id,
-                               destination):
-        break
+      game = db.RunInTransaction(CreateNewGameIfAbsent,
+                                 game_id)
       magnitude = magnitude * 10 + 9
-
-    game = db.run_in_transaction(self.AddPlayerToGame, game_id)
-    self.Output({"game_id": game_id,
-                 "player_id": 0,
-                 "secret": str(game.secret_keys[0])})
+    return game
     
 
 class GetHandler(GameHandler):
   """Handles getting the current game state."""
   
   def get(self):
-    self.post()
-  
-  def post(self):
     """Task: encode the game data in the output.
     
     GAME_ID_PARAMETER must be present in the request and in the datastore.
     """
-    self.OutputGame(self.GetGame())
-
-  def OutputGame(self, game):
-    """Write the game data to the output, serialized as YAML.
+    def GetAndAdvance():
+      game = self.GetGame()
+      if game.started:
+        game.Advance()
+        game.put()
+      return game
+    game = db.RunInTransaction(GetAndAdvance)
+    self.OutputGame(game)
     
-    Args:
-      game: The Game that should be written out.
-    """
-    key_values = {}
-    key_values["players"] = [str(player) for player in game.players]
-    key_values["zombies"] = str(game.zombies)
-    if game.started:
-      key_values["started"] = 1
-    else:
-      key_values["started"] = 0
-    key_values["destination"] = str(game.destination)
-    self.Output(key_values)
-
 
 class StartHandler(GetHandler):
   """Handles starting a game."""
   
   def get(self):
-    self.post()
-  
-  def post(self):
-    def StartGame():
-      if self.request.get(PLAYER_ID_PARAMETER, None) != str(OWNER_PLAYER_ID):
-        raise AuthorizationError("Only the game owner can start the game.")
+    def Start():
       game = self.GetGame()
+      if game.started:
+        # raise GameStateError("Cannot start a game twice.")
+        pass
+      if users.get_current_user() != game.owner:
+        raise AuthorizationError("Only the game owner can start the game.")
+      
+      # Set the destination
+      lat = None
+      lon = None
+      try:
+        lat = float(self.request.get(LATITUDE_PARAMETER))
+        lon = float(self.request.get(LONGITUDE_PARAMETER))
+      except ValueError, e:
+        raise MalformedRequestError(e)
+      
+      destination = Destination()
+      destination.SetLocation(lat, lon)
+  
       game.started = True
+      game.SetDestination(destination)
+      self.PopulateZombies(game)
       game.put()
+      
       return game
-    game = db.run_in_transaction(StartGame)
+    
+    game = db.RunInTransaction(Start)
     self.OutputGame(game)
+    
+  def PopulateZombies(self, game):
+    # Figure out which player is the owner
+    owner = None
+    for player in game.Players():
+      if player.Email() == game.owner.email():
+        owner = player
+    
+    if not owner.Lat() or not owner.Lon():
+      raise GameStateError("Cannot start a game before the game owner's "
+                           "location is known.  Game owner: %s" %
+                           owner.Email())
+    
+    # Figure out the midpoint of the owner and the destination
+    destination = game.Destination()
+    dLat = destination.Lat() - owner.Lat()
+    dLon = destination.Lon() - owner.Lon()
+    mid_lat = owner.Lat() + dLat / 2
+    mid_lon = owner.Lon() + dLon / 2
+    
+    # Populate the zombies.
+    # TODO: allow one ot change the number of zombies in the request
+    num_zombies = 0
+    average_zombie_speed = 0
+    try:
+      num_zombies = int(self.request.get(NUMBER_OF_ZOMBIES_PARAMETER))
+      average_zombie_speed = \
+          float(self.request.get(AVERAGE_SPEED_OF_ZOMBIES_PARAMETER))
+    except ValueError, e:
+      raise MalformedRequestError("Start game must include the zombie count "
+                                  "and average speed parameters, both numeric.")
+    
+    logging.info(game.zombies);
+    while len(game.zombies) < num_zombies:
+      lat = mid_lat + (random.random() - 0.5) * dLat * 2
+      lon = mid_lon + (random.random() - 0.5) * dLon * 2
+      
+      speed = average_zombie_speed * \
+          ((random.random() - 0.5) * ZOMBIE_SPEED_VARIANCE + 1)
+      
+      zombie = Zombie(speed=speed)
+      zombie.SetLocation(lat, lon)
+      game.AddZombie(zombie)
 
 
 class PutHandler(GetHandler):
@@ -269,49 +330,34 @@ class PutHandler(GetHandler):
   """
   
   def get(self):
-    self.post()
+    """Task: Parse the input data and update the game state."""
+    user = users.get_current_user()
+    if user:
+      lat = None
+      lon = None
+      try:
+        lat = float(self.request.get(LATITUDE_PARAMETER))
+        lon = float(self.request.get(LONGITUDE_PARAMETER))
+      except ValueError, e:
+        raise MalformedRequestError(e)
+      
+      def Put():
+        game = self.GetGame()
+        for i, player in enumerate(game.Players()):
+          if player.Email() == user.email():
+            if player.Lat() != lat or player.Lon() != lon:
+              player.SetLocation(float(self.request.get(LATITUDE_PARAMETER)),
+                                 float(self.request.get(LONGITUDE_PARAMETER)))
+              game.SetPlayer(i, player)
+            break
   
-  def post(self):
-    """Task: Parse the input data and update the game state.
-    
-    Looks for parameters in the POST data to determine which action to take:
-    
-    Prerequirement: GAME_ID_PARAMETER is present in the request and in the
-    datastore.
-    
-    If PLAYER_ID_PARAMETER and PLAYER_DATA_PARAMETER are found, update the
-    location of the appropriate player.
-    
-    If ZOMBIES_PARAMETER is present, update the state of the zombie horde.
-    """
-    def UpdateGameData(player_id, player, zombies, secret):
-      """Update the game data, returning the game."""
-      game = self.GetGame()
-      game.players[player_id] = db.Text(player)
-      if zombies is not None:
-        if player_id != OWNER_PLAYER_ID:
-          raise AuthorizationError("Attempt to record position of zombies by "
-                                   "a player who is not the game owner.")
-        game.zombies = db.Text(zombies)
-      game.put()
-      return game
-    
-    player_id = None
-    try:
-      player_id = int(self.request.get(PLAYER_ID_PARAMETER, None))
-    except ValueError, e:
-      raise MalformedRequestError("Player id must be included in the request "
-                                  "and be an integer.")
-
-    player = self.request.get(PLAYER_DATA_PARAMETER, None)
-    if player is None:
-      raise MalformedRequestError("Player data not included in request.")
-    
-    zombies = self.request.get(ZOMBIES_PARAMETER, None)
-    secret = self.request.get(SECRET_KEY_PARAMETER, None)
-    game = db.run_in_transaction(UpdateGameData,
-                                 player_id,
-                                 player,
-                                 zombies,
-                                 secret)
-    self.OutputGame(game)
+        if game.started:
+          game.Advance()
+          
+        game.put()
+        return game
+      
+      game = db.RunInTransaction(Put)
+      self.OutputGame(game)
+    else:
+      self.redirect(users.create_login_url(self.request.uri))
