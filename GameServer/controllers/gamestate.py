@@ -1,4 +1,6 @@
+import datetime
 import logging
+import pickle
 import random
 import wsgiref.handlers
 import yaml
@@ -7,6 +9,7 @@ from models.game import Destination
 from models.game import Game
 from models.game import Player
 from models.game import Zombie
+from google.appengine.api import memcache
 from google.appengine.api import users
 from google.appengine.ext import db
 from google.appengine.ext import webapp
@@ -85,16 +88,56 @@ class GameHandler(webapp.RequestHandler):
       except ValueError, e:
         raise MalformedRequestError("Game id not present in request or not an "
                                     "integer value.")
-
-    game = Game.get_by_key_name(self.GetGameKeyName(game_id))
-    if game is None:
-      raise GameNotFoundError()
-
-    if authorize:
-      self.Authorize(game)
     
-    self.game = game
-    return game
+    game_key = self.GetGameKeyName(game_id)
+    
+    if self.LoadFromMemcache(game_key) or self.LoadFromDatastore(game_key):
+      if authorize:
+        self.Authorize(self.game)
+      
+      return self.game
+    else:
+      raise GameNotFoundError()
+  
+  def LoadFromMemcache(self, key):
+    """Try loading the game from memcache.  Sets self.game, returns true if
+    self.game was successfully set.  If false, self.game was not set."""
+    encoded = memcache.get(key)
+    
+    if not encoded:
+      logging.warn("Memcache miss.")
+      return False
+    
+    try:
+      self.game = pickle.loads(encoded)
+      return True
+    except pickle.UnpicklingError, e:
+      logging.warn("UnpicklingError: %s" % e)
+      return False
+    
+  def LoadFromDatastore(self, key):
+    """Load the game from the database.  Sets self.game, returns true if
+    self.game was successfully set.  If false, self.game was not set."""
+    logging.info("Getting game from datastore.")
+    game = Game.get_by_key_name(key)
+    if game:
+      self.game = game
+      return True
+    else:
+      return False
+  
+  def PutGame(self, game, force_db_put):
+    # Put to Datastore once every 30 seconds.
+    age = datetime.datetime.now() - game.last_update_time
+    if age.seconds > 30 or force_db_put:
+      logging.info("Putting game to datastore.")
+      game.last_update_time = datetime.datetime.now()
+      game.put()
+
+    # Put to Memcache.
+    encoded = pickle.dumps(game)
+    if not memcache.set(game.key().name(), encoded):
+      logging.warn("Game set to Memcache failed.")
 
   def Authorize(self, game):
     user = users.get_current_user()
@@ -161,7 +204,7 @@ class JoinHandler(GameHandler):
       if user:
         game = self.AddPlayerToGame(game, user)
       return game
-    
+
     game = db.RunInTransaction(Join)
     self.OutputGame(game)
 
@@ -179,7 +222,7 @@ class JoinHandler(GameHandler):
     
     player = Player(user=user)
     game.AddPlayer(player)
-    game.put()
+    self.PutGame(game, True)
     
     return game
 
@@ -199,7 +242,7 @@ class CreateHandler(JoinHandler):
     if user:
       game = self.CreateGame()
       self.AddPlayerToGame(game, user)
-      game.put()
+      self.PutGame(game, True)
       self.OutputGame(game)
     else:
       raise AuthorizationError("Cannot join a game if you aren't a logged-in "
@@ -209,7 +252,7 @@ class CreateHandler(JoinHandler):
       game_key = self.GetGameKeyName(game_id)
       if Game.get_by_key_name(game_key) is None:
         game = Game(key_name=game_key)
-        game.put()
+        self.PutGame(game, True)
         return game
       return None
 
@@ -238,7 +281,7 @@ class GetHandler(GameHandler):
       game = self.GetGame()
       if game.started:
         game.Advance()
-        game.put()
+        self.PutGame(game, False)
       return game
     game = db.RunInTransaction(GetAndAdvance)
     self.OutputGame(game)
@@ -271,7 +314,7 @@ class StartHandler(GetHandler):
       game.started = True
       game.SetDestination(destination)
       self.PopulateZombies(game)
-      game.put()
+      self.PutGame(game, True)
       
       return game
     
@@ -354,7 +397,7 @@ class PutHandler(GetHandler):
         if game.started:
           game.Advance()
           
-        game.put()
+        self.PutGame(game, False)
         return game
       
       game = db.RunInTransaction(Put)
