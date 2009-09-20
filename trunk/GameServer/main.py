@@ -9,7 +9,10 @@ from google.appengine.ext import webapp
 
 URL_BINDINGS = [ 
                  ('/', admin.IndexPageHandler),
-                 ('/rpc/create', gamestate.CreateHandler),
+                 ('/begin', admin.CreateHandler),
+                 ('/wait', admin.WaitHandler),
+                 ('/session', admin.GameHandler),
+                 ('/game', admin.GameHandler),
                  ('/rpc/get', gamestate.GetHandler),
                  ('/rpc/join', gamestate.JoinHandler),
                  ('/rpc/put', gamestate.PutHandler),

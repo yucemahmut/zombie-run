@@ -210,6 +210,12 @@ class Game(db.Model):
   zombies = db.StringListProperty()
   destination = db.StringProperty()
   
+  # Meters per Second
+  average_zombie_speed = db.FloatProperty()
+  
+  # Zombies / km^2
+  zombie_density = db.FloatProperty()
+  
   started = db.BooleanProperty(default=False)
   done = db.BooleanProperty(default=False)
   humans_won = db.BooleanProperty()
