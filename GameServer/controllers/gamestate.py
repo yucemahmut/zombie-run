@@ -134,9 +134,9 @@ class GameHandler(webapp.RequestHandler):
   def PutGame(self, game, force_db_put):
     # Put to Datastore once every 30 seconds.
     age = datetime.datetime.now() - game.last_update_time
+    game.last_update_time = datetime.datetime.now()
     if age.seconds > 30 or force_db_put:
       logging.info("Putting game to datastore.")
-      game.last_update_time = datetime.datetime.now()
       game.put()
 
     # Put to Memcache.
