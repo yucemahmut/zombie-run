@@ -6,10 +6,8 @@ api_version: 1
 default_expiration: "7d"
 
 handlers:
-- url: /game
-  static_files: static/game.html
-  upload: static/game.html
-  login: required
+- url: /css
+  static_dir: static/css
 - url: /js
   static_dir: static/js
 - url: /res

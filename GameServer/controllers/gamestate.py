@@ -1,5 +1,7 @@
 import datetime
 import logging
+import math
+import os
 import pickle
 import random
 import wsgiref.handlers
@@ -13,6 +15,7 @@ from google.appengine.api import memcache
 from google.appengine.api import users
 from google.appengine.ext import db
 from google.appengine.ext import webapp
+from google.appengine.ext.webapp import template
 
 
 GAME_ID_PARAMETER = "gid"
@@ -21,6 +24,8 @@ LONGITUDE_PARAMETER = "lon"
 NUMBER_OF_ZOMBIES_PARAMETER = "num_zombies"
 AVERAGE_SPEED_OF_ZOMBIES_PARAMETER = "average_zombie_speed"
 ZOMBIE_SPEED_VARIANCE = 0.2
+MIN_NUM_ZOMBIES = 20
+MIN_ZOMBIE_DISTANCE_FROM_PLAYER = 20
 
 
 class Error(Exception):
@@ -162,6 +167,7 @@ class GameHandler(webapp.RequestHandler):
     """
     dictionary = {}
     dictionary["game_id"] = game.Id()
+    dictionary["owner"] = game.owner.email()
     
     dictionary["players"] = []
     for player_str in game.players:
@@ -178,6 +184,10 @@ class GameHandler(webapp.RequestHandler):
       dictionary["destination"] = destination_dict
     
     self.Output(json.dumps(dictionary))
+  
+  def OutputTemplate(self, dict, template_name):
+    path = os.path.join(os.path.dirname(__file__), 'templates', template_name)
+    self.response.out.write(template.render(path, dict))
   
   def Output(self, output):
     """Write the game to output."""
@@ -203,6 +213,7 @@ class JoinHandler(GameHandler):
       
       if user:
         game = self.AddPlayerToGame(game, user)
+        self.PutGame(game, True)
       return game
 
     game = db.RunInTransaction(Join)
@@ -222,52 +233,8 @@ class JoinHandler(GameHandler):
     
     player = Player(user=user)
     game.AddPlayer(player)
-    self.PutGame(game, True)
-    
     return game
 
-
-class CreateHandler(JoinHandler):
-  """Handles creating a new game state."""
-  
-  def get(self):
-    """Task: find an unused game id, create the state, and return the id.
-    
-    Expects no parameters to be present in the request.  Creates a random game
-    id, tests whether or not that game id exists in the datastore.  If yes,
-    repeat.  If no, write a Game entry to the datastore with that game id
-    and return that id in the response content.
-    """
-    user = users.get_current_user()
-    if user:
-      game = self.CreateGame()
-      self.AddPlayerToGame(game, user)
-      self.PutGame(game, True)
-      self.OutputGame(game)
-    else:
-      raise AuthorizationError("Cannot join a game if you aren't a logged-in "
-                               "user.")  
-  def CreateGame(self):
-    def CreateNewGameIfAbsent(game_id):
-      game_key = self.GetGameKeyName(game_id)
-      if Game.get_by_key_name(game_key) is None:
-        game = Game(key_name=game_key)
-        self.PutGame(game, True)
-        return game
-      return None
-
-    magnitude = 9999
-    game_id = None
-    game = None
-    while game is None:
-      # TODO: Limit this to not blow up the potential size of a game id to an
-      # arbitrarily large number.
-      game_id = random.randint(0, magnitude)
-      game = db.RunInTransaction(CreateNewGameIfAbsent,
-                                 game_id)
-      magnitude = magnitude * 10 + 9
-    return game
-    
 
 class GetHandler(GameHandler):
   """Handles getting the current game state."""
@@ -340,19 +307,18 @@ class StartHandler(GetHandler):
     mid_lat = owner.Lat() + dLat / 2
     mid_lon = owner.Lon() + dLon / 2
     
-    # Populate the zombies.
-    # TODO: allow one ot change the number of zombies in the request
-    num_zombies = 0
-    average_zombie_speed = 0
-    try:
-      num_zombies = int(self.request.get(NUMBER_OF_ZOMBIES_PARAMETER))
-      average_zombie_speed = \
-          float(self.request.get(AVERAGE_SPEED_OF_ZOMBIES_PARAMETER))
-    except ValueError, e:
-      raise MalformedRequestError("Start game must include the zombie count "
-                                  "and average speed parameters, both numeric.")
+    # Figure out how many zombies we will populate
+    radius_km = owner.DistanceFrom(destination) / (2 * 1000)
+    area_kmsq = math.pi * radius_km * radius_km
+    logging.info("Computing zombie count for an area of %f square km" %
+                 area_kmsq)
     
-    logging.info(game.zombies);
+    # Populate the zombies.
+    num_zombies = max(game.zombie_density * area_kmsq, MIN_NUM_ZOMBIES)
+    average_zombie_speed = game.average_zombie_speed
+    
+    # TODO: Implement keeping the zombies at least some distance away from each
+    # of the players.
     while len(game.zombies) < num_zombies:
       lat = mid_lat + (random.random() - 0.5) * dLat * 2
       lon = mid_lon + (random.random() - 0.5) * dLon * 2

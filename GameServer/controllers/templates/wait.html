@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block header %}{% endblock %}
+
+{% block content %}
+  <form action="/game">
+    <input type="hidden" name="gid" value="{{ game.Id }}" />
+    <input type="submit" value="Start Session" />
+  </form>
+{% endblock %}

@@ -2,26 +2,7 @@
 <head>
   <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <style type="text/css">
-    body {
-      margin: 0;
-      padding: 0;
-    }
-    .display {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-    .hidden {
-      display: none;
-      width: 0;
-      height: 0;
-    }
-    #loading, #game_menu {
-      text-align: center;
-      padding-top: 1em;
-    }
-  </style>
+  <link href="/css/main.css" rel="stylesheet" type="text/css">
 </head>
 <body onload="initialize()" onorientationchange="alert('orientation changed.');">
   <div id="map" class="display"></div>
@@ -56,6 +37,7 @@
   <script type="text/javascript" src="js/util.js"></script>
   <script type="text/javascript" src="js/entities.js"></script>
   <script type="text/javascript" src="js/game.js"></script>
+  <script type="text/javascript" src="js/dom_util.js"></script>
   <script type="text/javascript">
     function initialize() {
       switchView("map");
@@ -68,17 +50,9 @@
       };
       
       game_id = getUrlParameter("gid");
-      zombie_count = getUrlParameter("num_zombies");
-      average_zombie_speed = getUrlParameter("average_zombie_speed");
-      action = getUrlParameter("action");
       
       var map = new google.maps.Map(document.getElementById("map"), mapOptions);
-      var game = new Game(map);
-      if (game_id != null) {
-        game.joinGame(game_id);
-      } else if (zombie_count != null && average_zombie_speed != null) {
-        game.createGame(zombie_count, average_zombie_speed);
-      }
+      var game = new Game(map, game_id, "{{ user.email }}");
       
       if (game.start()) {
         console.log("Successfully started game.");
