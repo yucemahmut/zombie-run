@@ -8,6 +8,7 @@ import wsgiref.handlers
 import yaml
 from django.utils import simplejson as json
 from models.game import Destination
+from models.game import Entity
 from models.game import Game
 from models.game import Player
 from models.game import Zombie
@@ -26,6 +27,8 @@ AVERAGE_SPEED_OF_ZOMBIES_PARAMETER = "average_zombie_speed"
 ZOMBIE_SPEED_VARIANCE = 0.2
 MIN_NUM_ZOMBIES = 20
 MIN_ZOMBIE_DISTANCE_FROM_PLAYER = 20
+MAX_ZOMBIE_CLUSTER_SIZE = 4
+MAX_ZOMBIE_CLUSTER_RADIUS = 30
 
 
 class Error(Exception):
@@ -173,7 +176,11 @@ class GameHandler(webapp.RequestHandler):
     for player_str in game.players:
       player_dict = json.loads(player_str)
       dictionary["players"].append(player_dict)
-      
+
+    # TODO: only output the zombies that are near enough to the current user
+    # to be of any interest.  Possibility: compute line-of-sight from the
+    # current user based on the nearby terrain, to encourage players to travel
+    # to the top of nearby hills to get a better view.
     dictionary["zombies"] = []
     for zombie_str in game.zombies:
       zombie_dict = json.loads(zombie_str)
@@ -300,35 +307,88 @@ class StartHandler(GetHandler):
                            "location is known.  Game owner: %s" %
                            owner.Email())
     
-    # Figure out the midpoint of the owner and the destination
-    destination = game.Destination()
-    dLat = destination.Lat() - owner.Lat()
-    dLon = destination.Lon() - owner.Lon()
-    mid_lat = owner.Lat() + dLat / 2
-    mid_lon = owner.Lon() + dLon / 2
+    epicenter_lat, epicenter_lon = self.GetZombieEpicenter(game, owner)
     
-    # Figure out how many zombies we will populate
-    radius_km = owner.DistanceFrom(destination) / (2 * 1000)
+    # not / 2 because we want to cover more than the area just between the
+    # player and the destination
+    radius_m = owner.DistanceFrom(game.Destination())  
+    radius_km = radius_m / 1000
     area_kmsq = math.pi * radius_km * radius_km
     logging.info("Computing zombie count for an area of %f square km" %
                  area_kmsq)
     
     # Populate the zombies.
     num_zombies = max(game.zombie_density * area_kmsq, MIN_NUM_ZOMBIES)
-    average_zombie_speed = game.average_zombie_speed
     
     # TODO: Implement keeping the zombies at least some distance away from each
     # of the players.
     while len(game.zombies) < num_zombies:
-      lat = mid_lat + (random.random() - 0.5) * dLat * 2
-      lon = mid_lon + (random.random() - 0.5) * dLon * 2
+      max_zombie_cluster_size = min(MAX_ZOMBIE_CLUSTER_SIZE,
+                                    num_zombies - len(game.zombies))
+      zombie_cluster_size = random.randint(1, max_zombie_cluster_size)
+      self.AddZombieCluster(game,
+                            epicenter_lat,
+                            epicenter_lon,
+                            radius_m,
+                            zombie_cluster_size)
       
-      speed = average_zombie_speed * \
-          ((random.random() - 0.5) * ZOMBIE_SPEED_VARIANCE + 1)
-      
-      zombie = Zombie(speed=speed)
-      zombie.SetLocation(lat, lon)
-      game.AddZombie(zombie)
+  def AddZombieCluster(self,
+                       game,
+                       epicenter_lat, 
+                       epicenter_lon, 
+                       max_radius, 
+                       num_zombies):
+    cluster_distance_from_epicenter = random.random() * max_radius
+    cluster_lat, cluster_lon = \
+        self.RandomPointNear(epicenter_lat,
+                             epicenter_lon,
+                             cluster_distance_from_epicenter)
+    for i in xrange(num_zombies):
+      self.AddZombie(game,
+                     cluster_lat,
+                     cluster_lon)
+  
+  def AddZombie(self, game, center_lat, center_lon):
+    speed = game.average_zombie_speed * \
+        ((random.random() - 0.5) * ZOMBIE_SPEED_VARIANCE + 1)
+
+    distance_from_center = random.random() * MAX_ZOMBIE_CLUSTER_RADIUS
+
+    lat, lon = self.RandomPointNear(center_lat, 
+                                    center_lon, 
+                                    distance_from_center)
+    
+    zombie = Zombie(speed=speed)
+    zombie.SetLocation(lat, lon)
+    game.AddZombie(zombie)
+
+  def RandomPointNear(self, lat, lon, distance):
+    radians = math.pi * 2 * random.random()
+    to_lat = lat + math.sin(radians)
+    to_lon = lon + math.cos(radians)
+    
+    base = Entity()
+    base.SetLocation(lat, lon)
+
+    to = Entity()
+    to.SetLocation(to_lat, to_lon)
+
+    base_to_distance = base.DistanceFrom(to)
+    magnitude = distance / base_to_distance
+    
+    dLat = (to_lat - lat) * magnitude
+    dLon = (to_lon - lon) * magnitude
+    
+    return (lat + dLat, lon + dLon) 
+  
+  def GetZombieEpicenter(self, game, owner):
+    # Figure out the midpoint of the owner and the destination
+    destination = game.Destination()
+    dLat = destination.Lat() - owner.Lat()
+    dLon = destination.Lon() - owner.Lon()
+    mid_lat = owner.Lat() + dLat / 2
+    mid_lon = owner.Lon() + dLon / 2
+    return (mid_lat, mid_lon)
 
 
 class PutHandler(GetHandler):
@@ -360,6 +420,11 @@ class PutHandler(GetHandler):
               game.SetPlayer(i, player)
             break
   
+        # TODO: compute the zombie density in an area around each player, and if
+        # the zombie density drops below a certain level, add more zombies at
+        # the edge of that area.  This should ensure that players can travel
+        # long distances without running away from the original zombie
+        # population.
         if game.started:
           game.Advance()
           
