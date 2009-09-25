@@ -2,7 +2,7 @@ import logging
 import wsgiref.handlers
 
 from controllers import admin
-from controllers import gamestate
+from controllers import api
 from google.appengine.api import users
 from google.appengine.ext import webapp
 
@@ -13,10 +13,10 @@ URL_BINDINGS = [
                  ('/wait', admin.WaitHandler),
                  ('/session', admin.GameHandler),
                  ('/game', admin.GameHandler),
-                 ('/rpc/get', gamestate.GetHandler),
-                 ('/rpc/join', gamestate.JoinHandler),
-                 ('/rpc/put', gamestate.PutHandler),
-                 ('/rpc/start', gamestate.StartHandler),
+                 ('/rpc/get', api.GetHandler),
+                 ('/rpc/join', api.JoinHandler),
+                 ('/rpc/put', api.PutHandler),
+                 ('/rpc/start', api.StartHandler),
                ]
 REVERSE_URL_BINDINGS = {}
 

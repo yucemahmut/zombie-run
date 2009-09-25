@@ -3,8 +3,8 @@ import random
 
 import main
 
-from models import game as models
-from controllers import gamestate
+from models.game import Game
+from controllers import api
 from google.appengine.api import users
 from google.appengine.ext import db
 from google.appengine.ext import webapp
@@ -15,14 +15,14 @@ class Error(Exception):
   """Base error."""
 
 
-class IndexPageHandler(gamestate.GameHandler):
+class IndexPageHandler(api.GameHandler):
   
   def get(self):
     """ foo """
     user = users.get_current_user()
     template_values = {}
     if user:
-      query = models.Game.all()
+      query = Game.all()
       query.order("-last_update_time")
       query.filter("owner =", user)
       
@@ -47,7 +47,7 @@ ZOMBIE_DENSITY_PARAMETER = "zombie_density"
 START_IMMEDIATELY_PARAMETER = "start_immediately"
 
 
-class CreateHandler(gamestate.JoinHandler):
+class CreateHandler(api.JoinHandler):
   
   def get(self):
     """Task: find an unused game id, create the state, and return the id.
@@ -92,11 +92,11 @@ class CreateHandler(gamestate.JoinHandler):
   def CreateGame(self, user, average_zombie_speed, zombie_density):
     def CreateNewGameIfAbsent(game_id):
       game_key = self.GetGameKeyName(game_id)
-      if models.Game.get_by_key_name(game_key) is None:
-        game = models.Game(key_name=game_key,
-                           owner=user,
-                           average_zombie_speed=average_zombie_speed,
-                           zombie_density=zombie_density)
+      if Game.get_by_key_name(game_key) is None:
+        game = Game(key_name=game_key,
+                    owner=user,
+                    average_zombie_speed=average_zombie_speed,
+                    zombie_density=zombie_density)
         self.AddPlayerToGame(game, user)
         self.PutGame(game, True)
         return game
@@ -115,7 +115,7 @@ class CreateHandler(gamestate.JoinHandler):
     return game
 
 
-class GameHandler(gamestate.GameHandler):
+class GameHandler(api.GameHandler):
   
   def get(self):
     user = users.get_current_user()
@@ -123,7 +123,7 @@ class GameHandler(gamestate.GameHandler):
     self.OutputTemplate({"game": game, "user": user}, "game.html")
 
 
-class WaitHandler(gamestate.GameHandler):
+class WaitHandler(api.GameHandler):
 
   def get(self):
     game = self.GetGame()
