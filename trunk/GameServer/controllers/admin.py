@@ -39,7 +39,7 @@ class IndexPageHandler(gamestate.GameHandler):
     else:
       template_values["login"] = users.create_login_url(
           main.REVERSE_URL_BINDINGS[IndexPageHandler])
-      self.OutputTemplate(template_values, 'index.html')
+      self.OutputTemplate(template_values, 'intro.html')
     
 
 AVERAGE_ZOMBIE_SPEED_PARAMETER = "average_zombie_speed"
