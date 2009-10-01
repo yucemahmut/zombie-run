@@ -48,7 +48,7 @@ var Game = Class.create({
     }
     this.updating = false;
 
-    this.is_owner = this.game_data.owner == this.owner_email;
+    this.is_owner = this.game_data.owner == this.game_data.player;
     this.draw();
   },
   
@@ -89,13 +89,17 @@ var Game = Class.create({
       }
     }
     
-    var destination_latlng = new google.maps.LatLng(
-        this.game_data.destination.lat,
-        this.game_data.destination.lon);
-    if (this.destination) {
-      this.destination.locationUpdate(destination_latlng);
+    if (this.game_data.destination) {
+      var destination_latlng = new google.maps.LatLng(
+          this.game_data.destination.lat,
+          this.game_data.destination.lon);
+      if (this.destination) {
+        this.destination.locationUpdate(destination_latlng);
+      } else {
+        this.destination = new Destination(this.map, destination_latlng);
+      }
     } else {
-      this.destination = new Destination(this.map, destination_latlng);
+      console.log("No destination in game data.");
     }
   },
   
@@ -116,7 +120,11 @@ var Game = Class.create({
     // Put location to the server.
     this.update();
     
-    if (this.game_data && !this.game_data.destination && this.is_owner) {
+    if (this.game_data &&
+        !this.game_data.destination &&
+        this.is_owner &&
+        !this.destinationPickClickListener) {
+      console.log("Adding destination picking click listener");
       this.destinationPickClickListener =
           google.maps.event.addListener(this.map,
               "click",
