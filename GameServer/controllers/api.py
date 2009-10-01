@@ -179,6 +179,8 @@ class GameHandler(webapp.RequestHandler):
     dictionary["game_id"] = game.Id()
     dictionary["owner"] = game.owner.email()
     
+    dictionary["player"] = users.get_current_user().email()
+    
     dictionary["players"] = []
     for player_str in game.players:
       player_dict = json.loads(player_str)
