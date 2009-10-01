@@ -75,7 +75,6 @@ var Game = Class.create({
       this.game_data.zombies = [];
     } 
     while (this.zombies.length > this.game_data.zombies.length) {
-      console.log("Removing Zombie.");
       this.zombies.pop().remove();
     }
     for (i = 0; i < this.game_data.zombies.length; ++i) {
@@ -86,7 +85,6 @@ var Game = Class.create({
         this.zombies[i].locationUpdate(latLng);
         this.zombies[i].setIsNoticingPlayer(isNoticingPlayer);
       } else {
-        console.log("Adding Zombie.");
         this.zombies[this.zombies.length] =
             new Zombie(this.map, latLng, isNoticingPlayer);
       }
@@ -99,7 +97,6 @@ var Game = Class.create({
     while (this.players.length > this.game_data.players.length) {
       // game_data.players.length - 1 because we don't want to draw the current
       // user.
-      console.log("Removing player.");
       this.players.pop().remove();
     }
     for (i = 0; i < this.game_data.players.length; ++i) {
@@ -107,17 +104,13 @@ var Game = Class.create({
       if (player.email == this.game_data.player) {
         // Don't draw the current user.  We show the current user's location
         // with a blue dot.
-        console.log("Not drawing player " + player.email);
         continue;
-      } else {
-        console.log("Drawing player " + player.email);
       }
       
       latLng = new google.maps.LatLng(player.lat, player.lon);
       if (i < this.players.length) {
         this.players[i].locationUpdate(latLng);
       } else {
-        console.log("Adding player.");
         this.players[this.players.length] = new Player(this.map, latLng);
       }
     }
@@ -131,8 +124,6 @@ var Game = Class.create({
       } else {
         this.destination = new Destination(this.map, destination_latlng);
       }
-    } else {
-      console.log("No destination in game data.");
     }
   },
   
@@ -157,7 +148,6 @@ var Game = Class.create({
         !this.game_data.destination &&
         this.is_owner &&
         !this.destinationPickClickListener) {
-      console.log("Adding destination picking click listener");
       this.destinationPickClickListener =
           google.maps.event.addListener(this.map,
               "click",
