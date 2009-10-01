@@ -225,7 +225,7 @@ class Game(db.Model):
   
   def Id(self):
     # Drop the "g" at the beginning of the game key name.
-    return self.key().name()[1:]
+    return int(self.key().name()[1:])
   
   def Players(self):
     for encoded in self.players:

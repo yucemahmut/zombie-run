@@ -30,6 +30,9 @@ MIN_ZOMBIE_DISTANCE_FROM_PLAYER = 20
 MAX_ZOMBIE_CLUSTER_SIZE = 4
 MAX_ZOMBIE_CLUSTER_RADIUS = 30
 
+DEFAULT_ZOMBIE_SPEED = 1.34  # 3 miles per hour in meters per second
+DEFAULT_ZOMBIE_DENSITY = 50.0  # 50 zombies per square kilometer
+
 
 class Error(Exception):
   """Base error."""
@@ -52,6 +55,10 @@ class AuthorizationError(Error):
 
 
 class GameHandler(webapp.RequestHandler):
+  """The GameHandler is really a base RequestHandler for the other
+  RequestHandlers in the API.  It's not capable of handling anything on its own,
+  but rather provides a series of methods that are useful to the rest of the
+  handlers."""
   
   def __init__(self):
     self.game = None
@@ -201,10 +208,16 @@ class GameHandler(webapp.RequestHandler):
     self.response.headers["Content-Type"] = "text/plain; charset=utf-8"
     logging.debug("Response: %s" % output)
     self.response.out.write(output)
+    
+  def RedirectToLogin(self):
+    self.redirect(users.create_login_url(self.request.uri))
+  
+  def RedirectToGame(self, game):
+    self.redirect("/game?gid=%d" % game.Id())
 
 
 class JoinHandler(GameHandler):
-  """Handles players joining an unstarted game."""
+  """Handles players joining an ongoing game."""
   
   def get(self):
     """Adds a player to the game.
@@ -240,6 +253,50 @@ class JoinHandler(GameHandler):
     
     player = Player(user=user)
     game.AddPlayer(player)
+    return game
+
+
+class CreateHandler(JoinHandler):
+  """Handles creating a new game."""
+  
+  def get(self):
+    """Task: find an unused game id, create the state, and return the id.
+    
+    Expects no parameters to be present in the request.  Creates a random game
+    id, tests whether or not that game id exists in the datastore.  If yes,
+    repeat.  If no, write a Game entry to the datastore with that game id
+    and return that id in the response content.
+    """
+    user = users.get_current_user()
+    if not user:
+      self.RedirectToLogin()
+    else:
+      game = self.CreateGame(user)
+      self.RedirectToGame(game)
+        
+  def CreateGame(self, user):
+    def CreateNewGameIfAbsent(game_id):
+      game_key = self.GetGameKeyName(game_id)
+      if Game.get_by_key_name(game_key) is None:
+        game = Game(key_name=game_key,
+                    owner=user,
+                    average_zombie_speed=DEFAULT_ZOMBIE_SPEED,
+                    zombie_density=DEFAULT_ZOMBIE_DENSITY)
+        self.AddPlayerToGame(game, user)
+        self.PutGame(game, True)
+        return game
+      return None
+
+    magnitude = 9999
+    game_id = None
+    game = None
+    while game is None:
+      # TODO: Limit this to not blow up the potential size of a game id to an
+      # arbitrarily large number.
+      game_id = random.randint(0, magnitude)
+      game = db.RunInTransaction(CreateNewGameIfAbsent,
+                                 game_id)
+      magnitude = magnitude * 10 + 9
     return game
 
 
@@ -434,4 +491,4 @@ class PutHandler(GetHandler):
       game = db.RunInTransaction(Put)
       self.OutputGame(game)
     else:
-      self.redirect(users.create_login_url(self.request.uri))
+      self.RedirectToLogin()
