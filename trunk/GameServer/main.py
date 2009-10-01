@@ -1,18 +1,13 @@
 import logging
 import wsgiref.handlers
 
-from controllers import admin
 from controllers import api
 from google.appengine.api import users
 from google.appengine.ext import webapp
 
 
 URL_BINDINGS = [ 
-                 ('/', admin.IndexPageHandler),
-                 ('/begin', admin.CreateHandler),
-                 ('/wait', admin.WaitHandler),
-                 ('/session', admin.GameHandler),
-                 ('/game', admin.GameHandler),
+                 ('/', api.CreateHandler),
                  ('/rpc/get', api.GetHandler),
                  ('/rpc/join', api.JoinHandler),
                  ('/rpc/put', api.PutHandler),
