@@ -106,6 +106,12 @@ var Game = Class.create({
     }
 
     this.location = location;
+    
+    if (!this.locationMarker) {
+      this.locationMarker = new MyLocation(this.map, this.location);
+    } else {
+      this.locationMarker.locationUpdate(this.location);
+    }
 
     // Put location to the server.
     this.update();
