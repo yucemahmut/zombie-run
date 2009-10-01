@@ -52,7 +52,7 @@
       game_id = getUrlParameter("gid");
       
       var map = new google.maps.Map(document.getElementById("map"), mapOptions);
-      var game = new Game(map, game_id, "{{ user.email }}");
+      var game = new Game(map, game_id);
       
       if (game.start()) {
         console.log("Successfully started game.");

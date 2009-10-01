@@ -1,5 +1,5 @@
 var Game = Class.create({
-  initialize: function(map, game_id, owner_email) {
+  initialize: function(map, game_id) {
     this.map = map;
     this.location = false;
     this.game_data = new Object;
@@ -7,7 +7,6 @@ var Game = Class.create({
     this.players = new Array;
     this.updating = false;
     this.game_id = game_id;
-    this.owner_email = owner_email;
     this.is_owner = false;
   },
   
@@ -16,6 +15,10 @@ var Game = Class.create({
     this.locationProvider = new LocationProvider();
     if (!this.locationProvider.addListener(this)) {
       return false;
+    }
+    
+    if (this.game_id) {
+      this.request("/rpc/join", {"gid": this.game_id});
     }
     
     this.update();    
@@ -67,6 +70,14 @@ var Game = Class.create({
   },
   
   draw: function() {
+    // Update the location of all the Zombie icons
+    if (!this.game_data.zombies) {
+      this.game_data.zombies = [];
+    } 
+    while (this.zombies.length > this.game_data.zombies.length) {
+      console.log("Removing Zombie.");
+      this.zombies.pop().remove();
+    }
     for (i = 0; i < this.game_data.zombies.length; ++i) {
       zombie = this.game_data.zombies[i];
       latLng = new google.maps.LatLng(zombie.lat, zombie.lon);
@@ -75,16 +86,38 @@ var Game = Class.create({
         this.zombies[i].locationUpdate(latLng);
         this.zombies[i].setIsNoticingPlayer(isNoticingPlayer);
       } else {
-        this.zombies[this.zombies.length] = new Zombie(this.map, latLng, isNoticingPlayer);
+        console.log("Adding Zombie.");
+        this.zombies[this.zombies.length] =
+            new Zombie(this.map, latLng, isNoticingPlayer);
       }
     }
     
+    // Update the location of all the player icons
+    if (!this.game_data.players) {
+      this.game_data.players = [];
+    }
+    while (this.players.length > this.game_data.players.length) {
+      // game_data.players.length - 1 because we don't want to draw the current
+      // user.
+      console.log("Removing player.");
+      this.players.pop().remove();
+    }
     for (i = 0; i < this.game_data.players.length; ++i) {
       player = this.game_data.players[i];
+      if (player.email == this.game_data.player) {
+        // Don't draw the current user.  We show the current user's location
+        // with a blue dot.
+        console.log("Not drawing player " + player.email);
+        continue;
+      } else {
+        console.log("Drawing player " + player.email);
+      }
+      
       latLng = new google.maps.LatLng(player.lat, player.lon);
       if (i < this.players.length) {
         this.players[i].locationUpdate(latLng);
       } else {
+        console.log("Adding player.");
         this.players[this.players.length] = new Player(this.map, latLng);
       }
     }
