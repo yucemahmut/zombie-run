@@ -83,3 +83,20 @@ var Destination = Class.create(Entity, {
       });
   },
 });
+
+var MyLocation = Class.create(Entity, {
+  getMarker: function(map, latLng) {
+    var markerimage = new google.maps.MarkerImage(
+        "res/YourLocationDot.png",
+        new google.maps.Size(16, 16),
+        null,
+        new google.maps.Point(8, 8));
+    return new google.maps.Marker({
+        position:latLng,
+        map:map,
+        title:"Destination",
+        icon:markerimage,
+        // TODO: shadow image.
+      });
+  },
+});
