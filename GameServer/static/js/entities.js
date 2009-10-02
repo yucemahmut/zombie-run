@@ -23,8 +23,8 @@ var Entity = Class.create({
 var Player = Class.create(Entity, {
   getMarker: function(map, latLng) {
     var markerimage = new google.maps.MarkerImage(
-        "res/icon.png",
-        new google.maps.Size(48, 48));
+        "res/player.png",
+        new google.maps.Size(16, 40));
     return new google.maps.Marker({
         position:latLng,
         map:map,
