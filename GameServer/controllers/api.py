@@ -30,8 +30,8 @@ MIN_ZOMBIE_DISTANCE_FROM_PLAYER = 20
 MAX_ZOMBIE_CLUSTER_SIZE = 4
 MAX_ZOMBIE_CLUSTER_RADIUS = 30
 
-DEFAULT_ZOMBIE_SPEED = 1.34  # 3 miles per hour in meters per second
-DEFAULT_ZOMBIE_DENSITY = 50.0  # 50 zombies per square kilometer
+DEFAULT_ZOMBIE_SPEED = 3 * 0.447  # x miles per hour in meters per second
+DEFAULT_ZOMBIE_DENSITY = 20.0  # zombies per square kilometer
 
 
 class Error(Exception):
@@ -377,7 +377,7 @@ class StartHandler(GetHandler):
                  area_kmsq)
     
     # Populate the zombies.
-    num_zombies = max(game.zombie_density * area_kmsq, MIN_NUM_ZOMBIES)
+    num_zombies = int(max(game.zombie_density * area_kmsq, MIN_NUM_ZOMBIES))
     
     # TODO: Implement keeping the zombies at least some distance away from each
     # of the players.
