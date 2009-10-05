@@ -4,11 +4,20 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <link href="/css/main.css" rel="stylesheet" type="text/css">
 </head>
-<body onload="initialize()" onorientationchange="alert('orientation changed.');">
-  <div id="map" class="display"></div>
+<body onload="javascript:gameInterface = initialize();"
+      onunload="javascript:switchView('loading');"
+      onorientationchange="javascript:sizeMap();">
+  <div id="game" class="hidden">
+    <div id="map"></div>
+    <div id="menu">
+      <a href="#" onclick="javascript:gameInterface.addFriend();">Add Friend</a>
+    </div>
+  </div>
+  
   <div id="loading" class="display">
     <p>Loading...</p>
   </div>
+  
   <div id="errors" class="hidden">
     The game could not be started because of one of a few errors:
     <ul>
@@ -39,8 +48,20 @@
   <script type="text/javascript" src="js/game.js"></script>
   <script type="text/javascript" src="js/dom_util.js"></script>
   <script type="text/javascript">
+    var gameInterface = null;
+   
+    function sizeMap() {
+      var totalHeight = window.innerHeight;
+      var menuHeight = $("menu").offsetHeight;
+      var mapHeight = totalHeight - menuHeight;
+      $("map").style.height = mapHeight + "px";
+    }
+  
+    // Initializes the map and the game, switches the view to the map, starts
+    // the game, and returns the game oject.
     function initialize() {
-      switchView("map");
+      switchView("game");
+      sizeMap();
       console.log("Successfully switched view to map.");
       
       var mapOptions = {
@@ -60,10 +81,12 @@
         console.log("Errors starting the game.");
         switchView("errors");
       }
+      
+      return game;
     }
     
     function switchView(id) {
-      var views = [ "map", "errors", "loading" ];
+      var views = [ "game", "errors", "loading" ];
       var foundElement = false;
       for (i = 0; i < views.length; ++i) {
         element = $(views[i]);
