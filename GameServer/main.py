@@ -12,6 +12,7 @@ URL_BINDINGS = [
                  ('/rpc/join', api.JoinHandler),
                  ('/rpc/put', api.PutHandler),
                  ('/rpc/start', api.StartHandler),
+                 ('/rpc/addFriend', api.AddFriendHandler),
                ]
 REVERSE_URL_BINDINGS = {}
 
