@@ -60,6 +60,20 @@ var Game = Class.create({
   },
   
   request: function(url, parameters) {
+    // Requests should try to include the bounds of the current viewport, so
+    // that the server can include a restricted set of the data in its
+    // response, to minimize network traffic.
+    var bounds = null;
+    if (this.map) {
+      bounds = this.map.getBounds();
+    }
+    if (bounds) {
+      parameters["swLat"] = bounds.getSouthWest().lat();
+      parameters["swLon"] = bounds.getSouthWest().lng();
+      parameters["neLat"] = bounds.getNorthEast().lat();
+      parameters["neLon"] = bounds.getNorthEast().lng();
+    }
+     
     new Ajax.Request(url,
       {
         method: 'get',
