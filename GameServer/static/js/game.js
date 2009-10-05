@@ -175,4 +175,24 @@ var Game = Class.create({
           });
     }
   },
+  
+  addFriend: function() {
+    var email = prompt("What is your friend's email?");
+    new Ajax.Request("/rpc/addFriend",
+      {
+        method: 'get',
+        parameters: { "gid": this.game_id,
+                      "email": email },
+        onSuccess: this.addFriendSuccess.bind(this),
+        onFailure: this.addFriendFailed.bind(this),
+      });
+  },
+  
+  addFriendSuccess: function(transport) {
+    alert("We've invited your friend!  Tell them to check their email soon.");
+  },
+  
+  addFriendFailed: function() {
+    alert("Failed to send an invitation to your friend.  Please try again.");
+  },
 });
