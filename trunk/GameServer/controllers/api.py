@@ -6,12 +6,16 @@ import pickle
 import random
 import wsgiref.handlers
 import yaml
+
 from django.utils import simplejson as json
+
 from models.game import Destination
 from models.game import Entity
 from models.game import Game
 from models.game import Player
 from models.game import Zombie
+
+from google.appengine.api import mail
 from google.appengine.api import memcache
 from google.appengine.api import users
 from google.appengine.ext import db
@@ -215,7 +219,10 @@ class GameHandler(webapp.RequestHandler):
     self.redirect(users.create_login_url(self.request.uri))
   
   def RedirectToGame(self, game):
-    self.redirect("/game?gid=%d" % game.Id())
+    self.redirect(self.UrlForGame(game))
+  
+  def UrlForGame(self, game):
+    return "%s/game?gid=%d" % (self.request.host_url, game.Id())
 
 
 class JoinHandler(GameHandler):
@@ -494,3 +501,29 @@ class PutHandler(GetHandler):
       self.OutputGame(game)
     else:
       self.RedirectToLogin()
+
+class AddFriendHandler(GameHandler):
+  def get(self):
+    game = self.GetGame()
+    
+    to_addr = self.request.get("email")
+    if not mail.is_email_valid(to_addr):
+      # 403: Forbidden.
+      self.error(403)
+      return
+    
+    message = mail.EmailMessage()
+    message.sender = users.get_current_user().email()
+    message.to = to_addr
+    message.subject = ("%s wants to save you from Zombies!" % 
+                       users.get_current_user().nickname())
+    
+    game_link = self.UrlForGame(game)
+    # TODO: This should be a rendered Django template.
+    message.body = """%s wants to save you from Zombies!
+    
+    Click on this link on your iPhone or Android device to run far, far away: %s
+    """ % (users.get_current_user().nickname(),
+           self.UrlForGame(game))
+
+    message.send()
