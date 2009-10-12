@@ -12,6 +12,8 @@ var Game = Class.create({
   
   // start the game -- initialize location services.
   start: function() {
+    $("message").style.display = "block";
+  
     this.locationProvider = new LocationProvider();
     if (!this.locationProvider.addListener(this)) {
       return false;
