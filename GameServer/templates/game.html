@@ -13,10 +13,11 @@
       <a href="#" onclick="javascript:gameInterface.moveToCurrentLocation();">
         <img src="/res/YourLocationDot.png" width=16 height=16 border=0 />
       </a>
+      <a href="#" onclick="javascript:showInstructions();">Instructions</a>
     </div>
   </div>
 
-  <div id="message">
+  <div id="message" style="display: none;">
     <div id="message_background" style="display: none;"></div>
     <div id="message_container" style="display: none;">
       <img src="/res/icon.png" width=48 height=48 style="float: left;" />
@@ -28,7 +29,7 @@
       </a>
     </div>
   </div>
-  
+
   <div id="loading" class="display">
     <p>Loading...</p>
   </div>
@@ -66,11 +67,15 @@
     var gameInterface = null;
     
     function showInstructions() {
+      $("message").style.width = "100%";
+      $("message").style.height = "100%";
       $("message_background").style.display = "block";
       $("message_container").style.display = "block";
     }
     
     function hideInstructions() {
+      $("message").style.width = 0;
+      $("message").style.height = 0;
       $("message_background").style.display = "none";
       $("message_container").style.display = "none";
     }
