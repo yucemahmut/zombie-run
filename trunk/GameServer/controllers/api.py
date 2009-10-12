@@ -237,9 +237,9 @@ class GameHandler(webapp.RequestHandler):
     self.redirect(self.request.host_url)
   
   def UrlForGameJoin(self, game):
-    return "%s/?%s=%d" % (self.request.host_url,
-                          GAME_ID_PARAMETER,
-                          game.Id())
+    return "%s/join?%s=%d" % (self.request.host_url,
+                              GAME_ID_PARAMETER,
+                              game.Id())
 
 
 class GetHandler(GameHandler):
@@ -458,7 +458,6 @@ class AddFriendHandler(GameHandler):
     message.body = """%s wants to save you from Zombies!
     
     Click on this link on your iPhone or Android device to run far, far away: %s
-    """ % (users.get_current_user().nickname(),
-           self.UrlForGameJoin(game))
+    """ % (users.get_current_user().nickname(), game_link)
 
     message.send()
