@@ -63,7 +63,7 @@ body {
   background-color: white;
   border: 1px black solid;
   position: absolute;
-  overflow: hidden;
+  overflow: auto;
   top: 1em;
   left: 1em;
   right: 1em;
