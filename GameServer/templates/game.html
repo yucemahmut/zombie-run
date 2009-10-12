@@ -5,14 +5,26 @@
   <link href="/css/main.css" rel="stylesheet" type="text/css">
 </head>
 <body onload="javascript:gameInterface = initialize();"
-      onunload="javascript:switchView('loading');"
-      onorientationchange="javascript:sizeMap();">
+      onunload="javascript:switchView('loading');">
   <div id="game" class="hidden">
     <div id="map"></div>
     <div id="menu">
       <a href="#" onclick="javascript:gameInterface.addFriend();">Add Friend</a>
       <a href="#" onclick="javascript:gameInterface.moveToCurrentLocation();">
         <img src="/res/YourLocationDot.png" width=16 height=16 border=0 />
+      </a>
+    </div>
+  </div>
+
+  <div id="message">
+    <div id="message_background" style="display: none;"></div>
+    <div id="message_container" style="display: none;">
+      <img src="/res/icon.png" width=48 height=48 style="float: left;" />
+      <h2>Zombie, Run!</h2>
+      <p>How to Play:</p>
+      <p>TODO: instructions.</p>
+      <a href="#" onclick="javascript:hideInstructions();">
+        Hide Instructions
       </a>
     </div>
   </div>
@@ -52,30 +64,34 @@
   <script type="text/javascript" src="js/dom_util.js"></script>
   <script type="text/javascript">
     var gameInterface = null;
-   
-    function sizeMap() {
-      var totalHeight = window.innerHeight;
-      var menuHeight = $("menu").offsetHeight;
-      var mapHeight = totalHeight - menuHeight;
-      $("map").style.height = mapHeight + "px";
+    
+    function showInstructions() {
+      $("message_background").style.display = "block";
+      $("message_container").style.display = "block";
     }
-  
+    
+    function hideInstructions() {
+      $("message_background").style.display = "none";
+      $("message_container").style.display = "none";
+    }
+    
     // Initializes the map and the game, switches the view to the map, starts
     // the game, and returns the game oject.
     function initialize() {
       switchView("game");
-      sizeMap();
-      console.log("Successfully switched view to map.");
+
+      {% if show_instructions %}
+        showInstructions();
+      {% endif %}
       
       var mapOptions = {
-        center: new google.maps.LatLng(0, 0),
+        // center: new google.maps.LatLng(0, 0),
         mapTypeId: google.maps.MapTypeId.ROADMAP,
         zoom: 1,
       };
       
       var map = new google.maps.Map(document.getElementById("map"), mapOptions);
 
-      // game_id = getUrlParameter("gid");
       var game = new Game(map, {{ game_id }});
       
       if (game.start()) {
@@ -102,19 +118,6 @@
       }
       if (!foundElement) {
         alert("Error in display code.");
-      }
-    }
-    
-    function getUrlParameter(name) {
-      console.log("Getting url parameter '" + name + "'.");
-      name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
-      var regexS = "[\\?&]"+name+"=([^&#]*)";
-      var regex = new RegExp( regexS );
-      var results = regex.exec( window.location.href );
-      if (results == null) {
-        return null;
-      } else {
-        return results[1];
       }
     }
   </script>
