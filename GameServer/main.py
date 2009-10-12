@@ -1,15 +1,16 @@
 import logging
 import wsgiref.handlers
 
+from controllers import site
 from controllers import api
 from google.appengine.api import users
 from google.appengine.ext import webapp
 
 
-URL_BINDINGS = [ 
-                 ('/', api.CreateHandler),
+URL_BINDINGS = [
+                 ('/', site.HomepageHandler),
+                 ('/join', site.JoinHandler),
                  ('/rpc/get', api.GetHandler),
-                 ('/rpc/join', api.JoinHandler),
                  ('/rpc/put', api.PutHandler),
                  ('/rpc/start', api.StartHandler),
                  ('/rpc/addFriend', api.AddFriendHandler),

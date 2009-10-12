@@ -70,10 +70,10 @@
         zoom: 1,
       };
       
-      game_id = getUrlParameter("gid");
-      
       var map = new google.maps.Map(document.getElementById("map"), mapOptions);
-      var game = new Game(map, game_id);
+
+      // game_id = getUrlParameter("gid");
+      var game = new Game(map, {{ game_id }});
       
       if (game.start()) {
         console.log("Successfully started game.");

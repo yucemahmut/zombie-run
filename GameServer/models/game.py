@@ -12,6 +12,16 @@ TRIGGER_DISTANCE_METERS = 10
 ZOMBIE_VISION_DISTANCE_METERS = 200
 MAX_TIME_INTERVAL_SECS = 60 * 10  # 10 minutes
 
+ZOMBIE_SPEED_VARIANCE = 0.2
+MIN_NUM_ZOMBIES = 20
+MIN_ZOMBIE_DISTANCE_FROM_PLAYER = 20
+MAX_ZOMBIE_CLUSTER_SIZE = 4
+MAX_ZOMBIE_CLUSTER_RADIUS = 30
+
+DEFAULT_ZOMBIE_SPEED = 3 * 0.447  # x miles per hour in meters per second
+DEFAULT_ZOMBIE_DENSITY = 20.0  # zombies per square kilometer
+
+
 class Error(Exception):
   """Base error class for all model errors."""
 
@@ -195,6 +205,7 @@ class Zombie(Trigger):
     if obj.has_key("chasing"):
       self.chasing = obj["chasing"]
 
+
 class Destination(Trigger):
   
   def Trigger(self, user, game):
@@ -206,15 +217,19 @@ class Game(db.Model):
   
   owner = db.UserProperty(auto_current_user_add=True)
   
+  # The list of player emails, for querying.
+  player_emails = db.StringListProperty()
+  
+  # The actual encoded player data.
   players = db.StringListProperty()
   zombies = db.StringListProperty()
   destination = db.StringProperty()
   
   # Meters per Second
-  average_zombie_speed = db.FloatProperty()
+  average_zombie_speed = db.FloatProperty(default=DEFAULT_ZOMBIE_SPEED)
   
   # Zombies / km^2
-  zombie_density = db.FloatProperty()
+  zombie_density = db.FloatProperty(default=DEFAULT_ZOMBIE_DENSITY)
   
   started = db.BooleanProperty(default=False)
   done = db.BooleanProperty(default=False)
@@ -233,11 +248,13 @@ class Game(db.Model):
   
   def AddPlayer(self, player):
     self.players.append(player.ToString())
+    self.player_emails.append(player.Email())
   
   def SetPlayer(self, index, player):
     if index > len(self.players) - 1:
       raise ModelStateError("Trying to set a player that doesn't exist.")
     self.players[index] = player.ToString()
+    self.player_emails[index] = player.Email()
   
   def Zombies(self):
     for encoded in self.zombies:
