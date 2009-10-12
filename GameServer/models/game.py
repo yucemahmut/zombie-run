@@ -246,6 +246,11 @@ class Game(db.Model):
     for encoded in self.players:
       yield Player(encoded)
   
+  def LocatedPlayers(self):
+    for player in self.Players():
+      if player.Lat() and player.Lon():
+        yield player
+  
   def AddPlayer(self, player):
     self.players.append(player.ToString())
     self.player_emails.append(player.Email())
@@ -288,11 +293,11 @@ class Game(db.Model):
     seconds_to_move = min(seconds, MAX_TIME_INTERVAL_SECS)
     
     for i, zombie in enumerate(self.Zombies()):
-      zombie.Advance(seconds_to_move, self.Players())
+      zombie.Advance(seconds_to_move, self.LocatedPlayers())
       self.SetZombie(i, zombie)
       
     # Perform triggers
-    for player in self.Players():
+    for player in self.LocatedPlayers():
       if player.DistanceFrom(self.Destination()) < TRIGGER_DISTANCE_METERS:
         self.destination.Trigger(player, self)
       for zombie in self.Zombies():

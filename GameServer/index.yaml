@@ -17,7 +17,7 @@ indexes:
   - name: last_update_time
     direction: desc
 
-# Used once in query history.
+# Used 14 times in query history.
 - kind: Game
   properties:
   - name: player_emails
