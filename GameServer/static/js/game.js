@@ -139,11 +139,15 @@ var Game = Class.create({
   
   locationUpdate: function(location) {
     if (!this.location) {
-      this.map.set_center(location);
-      this.map.set_zoom(15);
+      this.location = location;
+      this.moveToCurrentLocation();
+    } else {
+      this.location = location;
     }
 
-    this.location = location;
+    if (moveToCurrentLocation) {
+      this.moveToCurrentLocation();
+    }
     
     if (!this.locationMarker) {
       this.locationMarker = new MyLocation(this.map, this.location);
@@ -163,6 +167,11 @@ var Game = Class.create({
               "click",
               this.locationSelected.bind(this));
     }
+  },
+  
+  moveToCurrentLocation: function() {
+    this.map.set_center(this.location);
+    this.map.set_zoom(15);
   },
   
   locationSelected: function(mouseEvent) {
