@@ -9,6 +9,7 @@ import yaml
 
 from django.utils import simplejson as json
 
+from models import game as game_module
 from models.game import Destination
 from models.game import Entity
 from models.game import Game
@@ -32,14 +33,6 @@ SW_LAT_PARAM = "swLat"
 SW_LON_PARAM = "swLon"
 NE_LAT_PARAM = "neLat"
 NE_LON_PARAM = "neLon"
-ZOMBIE_SPEED_VARIANCE = 0.2
-MIN_NUM_ZOMBIES = 20
-MIN_ZOMBIE_DISTANCE_FROM_PLAYER = 20
-MAX_ZOMBIE_CLUSTER_SIZE = 4
-MAX_ZOMBIE_CLUSTER_RADIUS = 30
-
-DEFAULT_ZOMBIE_SPEED = 3 * 0.447  # x miles per hour in meters per second
-DEFAULT_ZOMBIE_DENSITY = 20.0  # zombies per square kilometer
 
 
 class Error(Exception):
@@ -103,7 +96,7 @@ class GameHandler(webapp.RequestHandler):
     
     if game_id is None:
       try:
-        # Try to get and parse an integer from the game id parameter.
+        # Try to get and parse an integer from the URL's hash tag.
         game_id = int(self.request.get(GAME_ID_PARAMETER, None))
       except TypeError, e:
         raise MalformedRequestError("Game id not present in request or not an "
@@ -228,108 +221,25 @@ class GameHandler(webapp.RequestHandler):
     
     self.Output(json.dumps(dictionary))
   
-  def OutputTemplate(self, dict, template_name):
-    path = os.path.join(os.path.dirname(__file__), 'templates', template_name)
-    self.response.out.write(template.render(path, dict))
-  
   def Output(self, output):
     """Write the game to output."""
     self.response.headers["Content-Type"] = "text/plain; charset=utf-8"
     logging.debug("Response: %s" % output)
     self.response.out.write(output)
     
+  def LoginUrl(self):
+    return users.create_login_url(self.request.uri)
+    
   def RedirectToLogin(self):
-    self.redirect(users.create_login_url(self.request.uri))
+    self.redirect(self.LoginUrl())
   
-  def RedirectToGame(self, game):
-    self.redirect(self.UrlForGame(game))
+  def RedirectToGame(self):
+    self.redirect(self.request.host_url)
   
-  def UrlForGame(self, game):
-    return "%s/game?gid=%d" % (self.request.host_url, game.Id())
-
-
-class JoinHandler(GameHandler):
-  """Handles players joining an ongoing game."""
-  
-  def get(self):
-    """Adds a player to the game.
-    
-    GAME_ID_PARAMETER must be present in the request and in the datastore.
-    
-    Adds the player to the game with a blank initial entry, returning the
-    player's id and the game's secret key.
-    """
-    def Join():
-      game = self.GetGame(authorize=False)
-      user = users.get_current_user()
-      
-      if user:
-        game = self.AddPlayerToGame(game, user)
-        self.PutGame(game, True)
-      return game
-
-    game = db.RunInTransaction(Join)
-    self.OutputGame(game)
-
-  def AddPlayerToGame(self, game, user):
-    """Retreive the game with the provided id and add a player.
-    
-    Returns:
-      The modified and saved game object, with a new player appended to the
-      end of the list of players.  The new player's id will be
-      len(game.players) - 1 (the array index of the newest player.
-    """
-    for player in game.Players():
-      if player.Email() == user.email():
-        return game
-    
-    player = Player(user=user)
-    game.AddPlayer(player)
-    return game
-
-
-class CreateHandler(JoinHandler):
-  """Handles creating a new game."""
-  
-  def get(self):
-    """Task: find an unused game id, create the state, and return the id.
-    
-    Expects no parameters to be present in the request.  Creates a random game
-    id, tests whether or not that game id exists in the datastore.  If yes,
-    repeat.  If no, write a Game entry to the datastore with that game id
-    and return that id in the response content.
-    """
-    user = users.get_current_user()
-    if not user:
-      self.RedirectToLogin()
-    else:
-      game = self.CreateGame(user)
-      self.RedirectToGame(game)
-        
-  def CreateGame(self, user):
-    def CreateNewGameIfAbsent(game_id):
-      game_key = self.GetGameKeyName(game_id)
-      if Game.get_by_key_name(game_key) is None:
-        game = Game(key_name=game_key,
-                    owner=user,
-                    average_zombie_speed=DEFAULT_ZOMBIE_SPEED,
-                    zombie_density=DEFAULT_ZOMBIE_DENSITY)
-        self.AddPlayerToGame(game, user)
-        self.PutGame(game, True)
-        return game
-      return None
-
-    magnitude = 9999
-    game_id = None
-    game = None
-    while game is None:
-      # TODO: Limit this to not blow up the potential size of a game id to an
-      # arbitrarily large number.
-      game_id = random.randint(0, magnitude)
-      game = db.RunInTransaction(CreateNewGameIfAbsent,
-                                 game_id)
-      magnitude = magnitude * 10 + 9
-    return game
+  def UrlForGameJoin(self, game):
+    return "%s/?%s=%d" % (self.request.host_url,
+                          GAME_ID_PARAMETER,
+                          game.Id())
 
 
 class GetHandler(GameHandler):
@@ -407,12 +317,13 @@ class StartHandler(GetHandler):
                  area_kmsq)
     
     # Populate the zombies.
-    num_zombies = int(max(game.zombie_density * area_kmsq, MIN_NUM_ZOMBIES))
+    num_zombies = int(max(game.zombie_density * area_kmsq, 
+                          game_module.MIN_NUM_ZOMBIES))
     
     # TODO: Implement keeping the zombies at least some distance away from each
     # of the players.
     while len(game.zombies) < num_zombies:
-      max_zombie_cluster_size = min(MAX_ZOMBIE_CLUSTER_SIZE,
+      max_zombie_cluster_size = min(game_module.MAX_ZOMBIE_CLUSTER_SIZE,
                                     num_zombies - len(game.zombies))
       zombie_cluster_size = random.randint(1, max_zombie_cluster_size)
       self.AddZombieCluster(game,
@@ -439,9 +350,10 @@ class StartHandler(GetHandler):
   
   def AddZombie(self, game, center_lat, center_lon):
     speed = game.average_zombie_speed * \
-        ((random.random() - 0.5) * ZOMBIE_SPEED_VARIANCE + 1)
+        ((random.random() - 0.5) * game_module.ZOMBIE_SPEED_VARIANCE + 1)
 
-    distance_from_center = random.random() * MAX_ZOMBIE_CLUSTER_RADIUS
+    distance_from_center = \
+        random.random() * game_module.MAX_ZOMBIE_CLUSTER_RADIUS
 
     lat, lon = self.RandomPointNear(center_lat, 
                                     center_lon, 
@@ -541,12 +453,12 @@ class AddFriendHandler(GameHandler):
     message.subject = ("%s wants to save you from Zombies!" % 
                        users.get_current_user().nickname())
     
-    game_link = self.UrlForGame(game)
+    game_link = self.UrlForGameJoin(game)
     # TODO: This should be a rendered Django template.
     message.body = """%s wants to save you from Zombies!
     
     Click on this link on your iPhone or Android device to run far, far away: %s
     """ % (users.get_current_user().nickname(),
-           self.UrlForGame(game))
+           self.UrlForGameJoin(game))
 
     message.send()

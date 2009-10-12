@@ -17,10 +17,6 @@ var Game = Class.create({
       return false;
     }
     
-    if (this.game_id) {
-      this.request("/rpc/join", {"gid": this.game_id});
-    }
-    
     this.update();    
     setInterval(this.update.bind(this), 5000);
     return true;
