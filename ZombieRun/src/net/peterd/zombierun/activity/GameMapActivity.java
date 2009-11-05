@@ -21,7 +21,6 @@ import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.ViewGroup.LayoutParams;
 import android.widget.RelativeLayout;
 
 import com.google.android.maps.MapActivity;
@@ -60,15 +59,8 @@ public class GameMapActivity extends MapActivity {
     MapView map = mapView;
     map.setFocusableInTouchMode(true);
     map.setClickable(true);
+    map.setBuiltInZoomControls(true);
     mapLayout.addView(map);
-    
-    // Add the MapViewControls to their layout.
-    RelativeLayout mapZoomControlsLayout =
-        ((RelativeLayout) findViewById(R.id.map_zoom_controls_layout));
-    mapZoomControlsLayout.addView(
-        map.getZoomControls(),
-        LayoutParams.WRAP_CONTENT,
-        LayoutParams.WRAP_CONTENT);
     
     map.getOverlays().clear();
     myLocationOverlay = new MyLocationOverlay(this, map);
