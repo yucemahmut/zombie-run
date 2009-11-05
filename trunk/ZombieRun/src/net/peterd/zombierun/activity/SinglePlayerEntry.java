@@ -2,13 +2,12 @@ package net.peterd.zombierun.activity;
 
 import net.peterd.zombierun.R;
 import net.peterd.zombierun.game.GameSettings;
-import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 
-public class SinglePlayerEntry extends Activity {
+public class SinglePlayerEntry extends BaseActivity {
   
   @Override
   public void onCreate(Bundle state) {

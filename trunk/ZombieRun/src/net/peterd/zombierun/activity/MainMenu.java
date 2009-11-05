@@ -5,7 +5,6 @@ import net.peterd.zombierun.constants.ApplicationConstants;
 import net.peterd.zombierun.io.NetworkDataFetcher;
 import net.peterd.zombierun.io.UpdateChecker;
 import net.peterd.zombierun.service.HardwareManager;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -14,10 +13,9 @@ import android.os.Bundle;
 import android.os.Looper;
 import android.provider.Settings;
 import android.view.KeyEvent;
-import android.widget.RemoteViews.ActionException;
 import net.peterd.zombierun.util.Log;
 
-public abstract class MainMenu extends Activity {
+public abstract class MainMenu extends BaseActivity {
   
   @Override
   public void onCreate(Bundle state) {

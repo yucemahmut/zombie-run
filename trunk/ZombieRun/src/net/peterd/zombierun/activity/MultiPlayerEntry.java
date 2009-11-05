@@ -2,16 +2,13 @@ package net.peterd.zombierun.activity;
 
 import net.peterd.zombierun.R;
 import net.peterd.zombierun.game.GameSettings;
-import net.peterd.zombierun.util.GeoCalculationUtil;
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.Spinner;
 
-public class MultiPlayerEntry extends Activity {
+public class MultiPlayerEntry extends BaseActivity {
   
   @Override
   public void onCreate(Bundle state) {

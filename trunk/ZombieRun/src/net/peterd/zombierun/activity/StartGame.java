@@ -26,7 +26,7 @@ import net.peterd.zombierun.util.Log;
 import android.view.KeyEvent;
 import android.widget.TextView;
 
-public class StartGame extends Activity {
+public class StartGame extends BaseActivity {
 
   /**
    * Simply route to the first sub-activity.  This is defined here only so that we can have a
