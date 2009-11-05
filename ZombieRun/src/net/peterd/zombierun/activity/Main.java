@@ -1,11 +1,10 @@
 package net.peterd.zombierun.activity;
 
 import net.peterd.zombierun.constants.ApplicationConstants;
-import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 
-public class Main extends Activity {
+public class Main extends BaseActivity {
   
   @Override
   public void onCreate(Bundle state) {

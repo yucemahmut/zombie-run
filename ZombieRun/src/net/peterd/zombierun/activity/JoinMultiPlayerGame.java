@@ -1,10 +1,8 @@
 package net.peterd.zombierun.activity;
 
-import net.peterd.zombierun.R;
-import android.app.Activity;
 import android.os.Bundle;
 
-public class JoinMultiPlayerGame extends Activity {
+public class JoinMultiPlayerGame extends BaseActivity {
   
   @Override
   public void onCreate(Bundle state) {

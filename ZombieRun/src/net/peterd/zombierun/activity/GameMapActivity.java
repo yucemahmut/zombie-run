@@ -23,7 +23,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.RelativeLayout;
 
-import com.google.android.maps.MapActivity;
 import com.google.android.maps.MapView;
 import com.google.android.maps.MyLocationOverlay;
 
@@ -33,7 +32,7 @@ import com.google.android.maps.MyLocationOverlay;
  *
  * @author Peter Dolan (peterjdolan@gmail.com)
  */
-public class GameMapActivity extends MapActivity {
+public class GameMapActivity extends BaseMapActivity {
 
   protected GameService service;
   protected final Collection<GAME_MENU_OPTION> menuOptions = new ArrayList<GAME_MENU_OPTION>();
@@ -147,11 +146,6 @@ public class GameMapActivity extends MapActivity {
     }
   }
   
-  @Override
-  protected final boolean isRouteDisplayed() {
-    return false;
-  }
-
   @Override
   public boolean onPrepareOptionsMenu(Menu menu) {
     super.onCreateOptionsMenu(menu);

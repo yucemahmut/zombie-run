@@ -1,13 +1,11 @@
 package net.peterd.zombierun.activity;
 
 import net.peterd.zombierun.constants.ApplicationConstants;
-import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 
-public class About extends Activity {
-
+public class About extends BaseActivity {
   @Override
   public void onCreate(Bundle bundle) {
     super.onCreate(bundle);

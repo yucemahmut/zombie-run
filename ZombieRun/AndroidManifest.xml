@@ -30,9 +30,18 @@
     <activity android:name=".activity.StartGame$ShowingPickDestinationMessageActivity" android:label="StartGame_ShowingPickDestinationMessage" />
     <activity android:name=".activity.StartGame$PickingDestinationActivity" android:label="StartGame_PickingDestination" />
     <activity android:name=".activity.WinOrLoseGame" android:label="WinOrLoseGame" />
+    
+    <!-- Used for install referrer tracking -->
+    <receiver android:name="com.google.android.apps.analytics.AnalyticsReceiver"
+              android:exported="true">
+      <intent-filter>
+        <action android:name="com.android.vending.INSTALL_REFERRER" />
+      </intent-filter>
+    </receiver>
     <uses-library android:name="com.google.android.maps" />
   </application>
 	<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 	<uses-permission android:name="android.permission.VIBRATE" />
-	<uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 </manifest> 
