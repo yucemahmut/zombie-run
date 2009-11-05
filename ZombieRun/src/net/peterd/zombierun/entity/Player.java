@@ -1,3 +1,5 @@
+package net.peterd.zombierun.entity;
+
 import java.util.ArrayList;
 import java.util.List;
 
