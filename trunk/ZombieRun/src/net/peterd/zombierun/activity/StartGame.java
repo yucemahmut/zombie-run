@@ -7,17 +7,14 @@ import com.google.android.maps.MapView;
 import com.google.android.maps.Overlay;
 
 import net.peterd.zombierun.R;
-import net.peterd.zombierun.constants.Constants;
 import net.peterd.zombierun.constants.Constants.GAME_MENU_OPTION;
 import net.peterd.zombierun.entity.Destination;
 import net.peterd.zombierun.overlay.DestinationOverlay;
 import net.peterd.zombierun.service.HardwareManager;
 import net.peterd.zombierun.util.FloatingPointGeoPoint;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.location.LocationListener;
@@ -32,9 +29,21 @@ public class StartGame extends BaseActivity {
    * Simply route to the first sub-activity.  This is defined here only so that we can have a
    * consistent entry-point to the start-game set of activities.
    */
+  @SuppressWarnings("unchecked")
   public void onCreate(Bundle state) {
     super.onCreate(state);
-    Intent intent = new Intent(this, WaitingForFirstFixActivity.class);
+    
+    Class startingClass = null;
+    
+    HardwareManager hardware = new HardwareManager(this);
+    hardware.initializeHardware();
+    if (hardware.getLastKnownLocation() == null) {
+      startingClass = WaitingForFirstFixActivity.class;
+    } else {
+      startingClass = ShowingPickDestinationMessageActivity.class;
+    }
+    
+    Intent intent = new Intent(this, startingClass);
     intent.putExtras(getIntent().getExtras());
     startActivity(intent);
   }
@@ -143,8 +152,12 @@ public class StartGame extends BaseActivity {
 
       // The Intent that will take us back to the main screen.
       final Intent cancelIntent = new Intent(this, Main.class);
-      WaitingForLocationDialogView waitingForLocationDialogView =
-          new WaitingForLocationDialogView(this, service.getHardwareManager());
+      
+      TextView waitingForLocationDialogView = new TextView(this);
+      String message = this.getString(R.string.waiting_for_location);
+      waitingForLocationDialogView.setText(message);
+      waitingForLocationDialogView.setPadding(5, 5, 5, 5);
+      
       new AlertDialog.Builder(this)
           .setView(waitingForLocationDialogView)
           .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -237,50 +250,5 @@ public class StartGame extends BaseActivity {
         return true;
       }
     }
-  }
-  
-  private static class WaitingForLocationDialogView extends TextView implements LocationListener {
-    
-    private final Activity activity;
-    private final HardwareManager hardwareManager;
-    private Location location;
-    
-    public WaitingForLocationDialogView(Activity activity,
-        HardwareManager hardwareManager) {
-      super(activity);
-      this.activity = activity;
-      this.hardwareManager = hardwareManager;
-    }
-    
-    @Override
-    public void onDraw(Canvas canvas) {
-      String message = activity.getString(R.string.waiting_for_location);
-      if (location != null) {
-        message += "  Current location is accurate to " + location.getAccuracy() + " meters.";
-      }
-      message += "  Waiting for a location accurate to " + Constants.minDeviceAccuracyMeters +
-          " meters.";
-      setText(message);
-      setPadding(5, 5, 5, 5);
-      super.onDraw(canvas);
-    }
-
-    @Override
-    protected void onAttachedToWindow() {
-      hardwareManager.registerLocationListener(this);
-    };
-    
-    @Override
-    protected void onDetachedFromWindow() {
-      hardwareManager.removeLocationListener(this);
-    }
-    
-    public void onLocationChanged(Location location) {
-      this.location = location;
-      this.postInvalidate();
-    }
-    public void onProviderDisabled(String provider) { }
-    public void onProviderEnabled(String provider) { }
-    public void onStatusChanged(String provider, int status, Bundle extras) { }
   }
 }
