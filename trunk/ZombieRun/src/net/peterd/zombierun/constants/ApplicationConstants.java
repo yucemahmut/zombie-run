@@ -2,7 +2,7 @@ package net.peterd.zombierun.constants;
 
 public class ApplicationConstants {
 
-  private static final boolean developing = false;
+  private static final boolean developing = true;
   
   private static final String develMapsApiKey = "0gTCqChu4DUp2u2dMhUspP8EJlh8YeMUjO3FYqQ";
 
