@@ -22,11 +22,5 @@ public class ApplicationConstants {
     return developing;
   }
   
-  // The current version code must be incremented when releasing a new version.
-  // The version code MUST be kept in sync with the version code stored in AndroidManifest.xml
-  public static final int currentVersionCode = 7;
-  public static final String applicationVersionCheckUrl = "http://www.zrli.org/zombierun/version";
-  public static final String aboutUrl = "http://www.zrli.org/zombierun/";
-  
   public static final boolean multiplayerEnabled = false;
 }

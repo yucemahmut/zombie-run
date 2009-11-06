@@ -40,7 +40,12 @@
   <string name="help_button_text">Help</string>
   
   <!--  Strings for the update checker -->
-  <string name="update_available">A new version of ZombieRun is available.</string>
-  <string name="do_update">Update now!</string>
-  <string name="remind_me_later">Later!</string>
+  
+  
+  
+<string name="adsense_pub_id">ca-mb-app-pub-5257925350964339</string>
+<string name="adsense_company_name">Zombie Research Labs</string>
+<string name="adsense_keywords">zombie,game,mobile,technology</string>
+<string name="adsense_channel">ZombieRun</string>
+<string name="about_url">http://www.zrli.org/zombierun/</string>
 </resources>
