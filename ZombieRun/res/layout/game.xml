@@ -9,9 +9,4 @@
       android:layout_height="wrap_content"
       android:id="@+id/map_layout"
       android:layout_gravity="bottom|center_horizontal" />
-  <RelativeLayout
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:id="@+id/map_zoom_controls_layout"
-      android:layout_gravity="bottom|center_horizontal" />
 </FrameLayout>
