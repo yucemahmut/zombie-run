@@ -1,12 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/game_layout"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     >
-  <RelativeLayout
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:id="@+id/map_layout"
-      android:layout_gravity="bottom|center_horizontal" />
-</FrameLayout>
+	 <!-- Development api key -->
+	 <com.google.android.maps.MapView
+	     android:id="@+id/mapview"
+	     android:layout_width="fill_parent"
+	     android:layout_height="fill_parent"
+	     android:clickable="true"
+	     android:apiKey="0gTCqChu4DUqe2dV43qCoKiESfKV2kqpIBET7ZQ"
+	     />
+   <com.google.ads.GoogleAdView
+       android:id="@+id/adview"
+       android:layout_width="wrap_content"
+       android:layout_height="wrap_content"
+       android:layout_alignTop="@+id/mapview" />
+</RelativeLayout>

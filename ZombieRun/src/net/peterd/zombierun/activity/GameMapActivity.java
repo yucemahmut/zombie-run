@@ -23,6 +23,9 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.RelativeLayout;
 
+import com.google.ads.AdSenseSpec;
+import com.google.ads.GoogleAdView;
+import com.google.ads.AdSenseSpec.AdType;
 import com.google.android.maps.MapView;
 import com.google.android.maps.MyLocationOverlay;
 
@@ -47,19 +50,32 @@ public class GameMapActivity extends BaseMapActivity {
   @Override
   public void onCreate(Bundle state) {
     super.onCreate(state);
+    
+    setContentView(R.layout.game);
+
+    // Set up GoogleAdView.
+    GoogleAdView adView = (GoogleAdView) findViewById(R.id.adview);
+    AdSenseSpec adSenseSpec =
+        new AdSenseSpec("ca-mb-app-pub-5257925350964339")
+        .setCompanyName("Zombie Research Labs")
+        .setAppName("Zombie, Run!")
+        .setKeywords("zombie,game,mobile,technology")
+        .setChannel("ZombieRun")
+        .setAdType(AdType.TEXT_IMAGE)
+        .setWebEquivalentUrl("http://www.zrli.org/zombierun/")
+        .setAdTestEnabled(ApplicationConstants.testing());
+    // Fetch Google ad.
+    // PLEASE DO NOT CLICK ON THE AD UNLESS YOU ARE IN TEST MODE.
+    // OTHERWISE, YOUR ACCOUNT MAY BE DISABLED.
+    adView.showAds(adSenseSpec);
 
     service = new GameService(this);
     
-    setContentView(R.layout.game);
-    RelativeLayout mapLayout = (RelativeLayout) findViewById(R.id.map_layout);
-    mapLayout.removeAllViews();
-    
-    mapView = new MapView(this, ApplicationConstants.getMapsApiKey());
+    mapView = (MapView) findViewById(R.id.mapview);
     MapView map = mapView;
     map.setFocusableInTouchMode(true);
     map.setClickable(true);
     map.setBuiltInZoomControls(true);
-    mapLayout.addView(map);
     
     map.getOverlays().clear();
     myLocationOverlay = new MyLocationOverlay(this, map);
