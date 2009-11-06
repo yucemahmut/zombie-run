@@ -10,8 +10,6 @@ import java.net.URLConnection;
 import java.util.Collections;
 import java.util.Map;
 
-import net.peterd.zombierun.constants.ApplicationConstants;
-
 public class NetworkDataFetcher implements DataFetcher {
 
   public BufferedReader getData(String url) throws IOException {
@@ -22,8 +20,7 @@ public class NetworkDataFetcher implements DataFetcher {
   public BufferedReader getData(String url, Map<String, String> postVariables) throws IOException {
     URL u = new URL(url);
     URLConnection connection = u.openConnection();
-    connection.addRequestProperty("User-Agent",
-        "ZombieRun/" + ApplicationConstants.currentVersionCode);
+    connection.addRequestProperty("User-Agent", "ZombieRun");
     buildPostData(connection, postVariables);
     InputStream content = connection.getInputStream();
     return new BufferedReader(new InputStreamReader(content));

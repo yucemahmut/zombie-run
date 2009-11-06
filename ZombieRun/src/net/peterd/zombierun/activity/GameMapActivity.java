@@ -56,13 +56,13 @@ public class GameMapActivity extends BaseMapActivity {
     // Set up GoogleAdView.
     GoogleAdView adView = (GoogleAdView) findViewById(R.id.adview);
     AdSenseSpec adSenseSpec =
-        new AdSenseSpec("ca-mb-app-pub-5257925350964339")
-        .setCompanyName("Zombie Research Labs")
-        .setAppName("Zombie, Run!")
-        .setKeywords("zombie,game,mobile,technology")
-        .setChannel("ZombieRun")
+        new AdSenseSpec(getString(R.string.adsense_pub_id))
+        .setCompanyName(getString(R.string.adsense_company_name))
+        .setAppName(getString(R.string.app_name))
+        .setKeywords(getString(R.string.adsense_keywords))
+        .setChannel(getString(R.string.adsense_channel))
         .setAdType(AdType.TEXT_IMAGE)
-        .setWebEquivalentUrl("http://www.zrli.org/zombierun/")
+        .setWebEquivalentUrl(getString(R.string.about_url))
         .setAdTestEnabled(ApplicationConstants.testing());
     // Fetch Google ad.
     // PLEASE DO NOT CLICK ON THE AD UNLESS YOU ARE IN TEST MODE.
