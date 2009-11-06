@@ -1,19 +1,13 @@
 package net.peterd.zombierun.activity;
 
 import net.peterd.zombierun.R;
-import net.peterd.zombierun.constants.ApplicationConstants;
-import net.peterd.zombierun.io.NetworkDataFetcher;
-import net.peterd.zombierun.io.UpdateChecker;
 import net.peterd.zombierun.service.HardwareManager;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
-import android.os.Looper;
 import android.provider.Settings;
 import android.view.KeyEvent;
-import net.peterd.zombierun.util.Log;
 
 public abstract class MainMenu extends BaseActivity {
   
@@ -24,7 +18,6 @@ public abstract class MainMenu extends BaseActivity {
       onRestoreInstanceState(state);
     }
     setupMainLayout();
-    beginCheckingForUpdate();
     testForHardwareCapabilitiesAndShowAlert();
   }
   
@@ -72,54 +65,6 @@ public abstract class MainMenu extends BaseActivity {
       startActivity(mainScreenIntent);
     }
     return false;
-  }
-  
-  private void beginCheckingForUpdate() {
-    final UpdateChecker updateChecker =
-        new UpdateChecker(
-            ApplicationConstants.applicationVersionCheckUrl,
-            ApplicationConstants.currentVersionCode,
-            new NetworkDataFetcher());
-    final Runnable checkForUpdateRunnable = new Runnable() {
-        public void run() {
-          Looper.prepare();
-          try {
-            if (updateChecker.checkForUpdate()) {
-              if (updateChecker.newVersionIsAvailable()) {
-                Log.i("ZombieRun.MainMenu", "New market update found.  Showing update dialog.");
-                showNewUpdateAvailableAlert(
-                    updateChecker.getField(UpdateChecker.FIELD.APPLICATION_ID));
-              } else {
-                Log.i("ZombieRun.MainMenu", "No market update available.");
-              }
-            }
-          } catch (Exception e) {
-            Log.e("ZombieRun.MainMenu", "Uncaught Exception while checking for new version.", e);
-            return;
-          }
-          Looper.loop();
-        }
-      };
-    Thread checkForUpdateThread = new Thread(checkForUpdateRunnable);
-    checkForUpdateThread.start();
-  }
-  
-  private void showNewUpdateAvailableAlert(final String marketApplicationId) {
-    new AlertDialog.Builder(this)
-        .setMessage(R.string.update_available)
-        .setPositiveButton(R.string.do_update,
-            new DialogInterface.OnClickListener() {
-              public void onClick(DialogInterface dialog, int which) {
-                Uri applicationMarketUri = Uri.parse("market://details?id=" + marketApplicationId);
-                Intent openMarketIntent = new Intent(Intent.ACTION_VIEW, applicationMarketUri);
-                startActivity(openMarketIntent);
-              }
-            })
-        .setNegativeButton(R.string.remind_me_later,
-            new DialogInterface.OnClickListener() {
-              public void onClick(DialogInterface dialog, int which) { }
-            })
-        .show();
   }
   
   private void showEnableGPSAlert() {
