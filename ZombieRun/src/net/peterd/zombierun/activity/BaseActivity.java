@@ -5,19 +5,19 @@ package net.peterd.zombierun.activity;
 import com.google.android.apps.analytics.GoogleAnalyticsTracker;
 
 import android.app.Activity;
-import android.os.Bundle;
+import android.util.Log;
 
 public class BaseActivity extends Activity {
 
   protected GoogleAnalyticsTracker tracker;
   
   @Override
-  protected void onCreate(Bundle bundle) {
-    super.onCreate(bundle);
+  public void onStart() {
+    super.onStart();
     tracker = GoogleAnalyticsTracker.getInstance();
     tracker.start("UA-214814-13", this);
-    String pageView = this.getClass().getSimpleName();
-    tracker.trackPageView("/action/" + pageView);
+    String pageView = "/action/" + this.getClass().getSimpleName();
+    Log.d("ZombieRun.BaseActivity", pageView);
+    tracker.trackPageView(pageView);
   }
-
 }
