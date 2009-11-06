@@ -18,6 +18,10 @@ public class ApplicationConstants {
     return developing;
   }
   
+  public static boolean testing() {
+    return developing;
+  }
+  
   // The current version code must be incremented when releasing a new version.
   // The version code MUST be kept in sync with the version code stored in AndroidManifest.xml
   public static final int currentVersionCode = 7;
