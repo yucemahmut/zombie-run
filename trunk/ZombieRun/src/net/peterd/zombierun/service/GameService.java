@@ -26,7 +26,6 @@ import net.peterd.zombierun.util.FloatingPointGeoPoint;
  */
 public class GameService {
   
-  private final Activity activity;
   private final HardwareManager hardwareManager;
   private final GameEventHandler eventHandler = new GameEventHandler();
   private final GameServerBridge gameServerBridge = new GameServerBridge(new NetworkDataFetcher());
@@ -37,7 +36,6 @@ public class GameService {
   private RemoteGameStateSynchronizer remoteSynchronizer;
   
   public GameService(Activity activity) {
-    this.activity = activity;
     hardwareManager = new HardwareManager(activity);
     hardwareManager.initializeHardware();
     eventHandler.addListener(hardwareManager);

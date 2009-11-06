@@ -6,7 +6,6 @@ import net.peterd.zombierun.entity.Destination;
 import net.peterd.zombierun.entity.Player;
 import net.peterd.zombierun.entity.Zombie;
 import net.peterd.zombierun.entity.Zombie.ZombieListSerializer;
-import net.peterd.zombierun.game.GameEvent;
 import net.peterd.zombierun.game.GameState;
 import net.peterd.zombierun.service.GameEventBroadcaster;
 import net.peterd.zombierun.util.Log;
