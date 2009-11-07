@@ -16,8 +16,8 @@
     </activity>
     
     <!-- Alphabetical -->
-    <activity android:name=".activity.About" android:label="About" />
-    <activity android:name=".activity.JoinMultiPlayerGame" android:label="JoinMultiPlayerGame" />
+    <activity android:name=".activity.About" android:label="About" android:screenOrientation="portrait" />
+    <activity android:name=".activity.JoinMultiPlayerGame" android:label="JoinMultiPlayerGame" android:screenOrientation="portrait" />
     <activity android:name=".activity.MainMenuWithMultiplayerDisabled" android:label="MainMenu_WithMultiplayerDisabled" />
     <activity android:name=".activity.MainMenuWithMultiplayerEnabled" android:label="MainMenu_WithMultiplayerEnabled" />
     <activity android:name=".activity.MultiPlayerEntry" android:label="MultiPlayerEntry" android:screenOrientation="portrait" />
@@ -29,7 +29,7 @@
     <activity android:name=".activity.StartGame$WaitingForFirstFixActivity" android:label="StartGame_WaitingForFirstFix" android:screenOrientation="portrait" />
     <activity android:name=".activity.StartGame$ShowingPickDestinationMessageActivity" android:label="StartGame_ShowingPickDestinationMessage" android:screenOrientation="portrait" />
     <activity android:name=".activity.StartGame$PickingDestinationActivity" android:label="StartGame_PickingDestination" android:screenOrientation="portrait" />
-    <activity android:name=".activity.WinOrLoseGame" android:label="WinOrLoseGame" />
+    <activity android:name=".activity.WinOrLoseGame" android:label="WinOrLoseGame" android:screenOrientation="portrait" />
     
     <!-- Used for install referrer tracking -->
     <receiver android:name="com.google.android.apps.analytics.AnalyticsReceiver"
