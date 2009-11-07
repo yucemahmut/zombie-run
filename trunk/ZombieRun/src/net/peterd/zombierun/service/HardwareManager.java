@@ -24,6 +24,7 @@ public class HardwareManager implements GameEventListener, LocationListener {
   private String bestLocationProvider;
   
   public HardwareManager(Activity activity) {
+    // The HardwareManager must not hold onto the Activity it's given.
     locationManager = (LocationManager) activity.getSystemService(Activity.LOCATION_SERVICE);
     vibrator = (Vibrator) activity.getSystemService(Activity.VIBRATOR_SERVICE);
   }
@@ -31,7 +32,6 @@ public class HardwareManager implements GameEventListener, LocationListener {
   /**
    * Initialize the various hardware systems that the ZombieRun game needs.
    * 
-   * @param activity the {@link Activity} in which the game is running.
    * @return A message id if there was an error, else null.
    */
   public Integer initializeHardware() {

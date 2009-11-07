@@ -63,11 +63,20 @@ public abstract class Game extends GameMapActivity implements GameEventListener 
     }
 
     createGame(service, destination);
-    service.getEventHandler().addListener(this);
 
     // Game State is initialized in Service#createSinglePlayerGame
     initializeDestinationOverlay(mapView);
     initializeZombieOverlay(mapView);
+  }
+  
+  protected void onResume() {
+    super.onResume();
+    service.getEventHandler().addListener(this);
+  }
+  
+  protected void onPause() {
+    super.onPause();
+    service.getEventHandler().removeListener(this);
   }
   
   protected abstract void createGame(GameService service, Destination destination);

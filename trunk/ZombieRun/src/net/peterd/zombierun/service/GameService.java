@@ -36,6 +36,10 @@ public class GameService {
   private RemoteGameStateSynchronizer remoteSynchronizer;
   
   public GameService(Activity activity) {
+    // The GameService must not hang onto the Activity it is given in the
+    // constructor.
+    
+    // The HardwareManager does not hold onto the activity.
     hardwareManager = new HardwareManager(activity);
     hardwareManager.initializeHardware();
     eventHandler.addListener(hardwareManager);
