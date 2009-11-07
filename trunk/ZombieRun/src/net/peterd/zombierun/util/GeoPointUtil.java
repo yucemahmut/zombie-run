@@ -13,50 +13,40 @@ public class GeoPointUtil {
         (int) Math.round(location.getLongitude() * 1E6));
   }
   
-  public static FloatingPointGeoPoint getGeoPointNear(FloatingPointGeoPoint origin,
+  public static FloatingPointGeoPoint getGeoPointNear(double lat, double lon,
       double distanceMeters) {
-    FloatingPointGeoPoint directionalGeoPoint =
-        new FloatingPointGeoPoint(Math.random() - 0.5 + origin.getLatitude(),
-            Math.random() - 0.5 + origin.getLongitude());
-    return geoPointTowardsTarget(origin, directionalGeoPoint, distanceMeters);
+    double targetLat = Math.random() - 0.5 + lat;
+    double targetLon = Math.random() - 0.5 + lon;
+    return geoPointTowardsTarget(lat, lon, targetLat, targetLon, distanceMeters);
   }
 
   public static FloatingPointGeoPoint geoPointTowardsTarget(
-      FloatingPointGeoPoint origin,
-      FloatingPointGeoPoint target,
+      double oLat,
+      double oLon,
+      double dLat,
+      double dLon,
       double distanceMeters) {
-    double diffLat = target.getLatitude() - origin.getLatitude();
-    double diffLon = target.getLongitude() - origin.getLongitude();
+    double diffLat = dLat - oLat;
+    double diffLon = dLon - oLon;
     
-    double diffMagnitudeMeters = distanceMeters(origin, target);
+    double diffMagnitudeMeters = distanceMeters(oLat, oLon, dLat, dLon);
     double deltaLat = diffLat * (distanceMeters / diffMagnitudeMeters);
     double deltaLon = diffLon * (distanceMeters / diffMagnitudeMeters);
     
-    return new FloatingPointGeoPoint(
-        origin.getLatitude() + deltaLat,
-        origin.getLongitude() + deltaLon);
+    return new FloatingPointGeoPoint(oLat + deltaLat, oLon + deltaLon);
   }
   
-  public static double distanceMeters(GeoPoint gp1, GeoPoint gp2) {
-    return distanceMeters(new FloatingPointGeoPoint(gp1), new FloatingPointGeoPoint(gp2));
-  }
-  
-  public static double distanceMeters(FloatingPointGeoPoint gp1, GeoPoint gp2) {
-    return distanceMeters(gp1, new FloatingPointGeoPoint(gp2));
-  }
-  
-  public static double distanceMeters(GeoPoint gp1, FloatingPointGeoPoint gp2) {
-    return distanceMeters(new FloatingPointGeoPoint(gp1), gp2);
-  }
-  
-  public static double distanceMeters(FloatingPointGeoPoint gp1,
-      FloatingPointGeoPoint gp2) {
+  /**
+   * A version of distanceMeters that can be used without allocating additional
+   * FloatingPointGeoPoint objects.
+   */
+  public static double distanceMeters(double aLat, double aLon, double bLat, double bLon) {
     // Haversine formula, from http://mathforum.org/library/drmath/view/51879.html
-    double dlon = gp2.getLongitude() - gp1.getLongitude();
-    double dlat = gp2.getLatitude() - gp1.getLatitude();
+    double dlon = bLon - aLon;
+    double dlat = bLat - aLat;
     double a = Math.pow(Math.sin(Math.toRadians(dlat/2)), 2) +
-        Math.cos(Math.toRadians(gp1.getLatitude())) *
-        Math.cos(Math.toRadians(gp2.getLatitude())) *
+        Math.cos(Math.toRadians(aLat)) *
+        Math.cos(Math.toRadians(bLat)) *
         Math.pow(Math.sin(Math.toRadians(dlon / 2)), 2);
     double greatCircleDistance = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
     return Constants.radiusOfEarthMeters * greatCircleDistance;

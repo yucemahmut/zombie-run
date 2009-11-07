@@ -17,7 +17,8 @@ import net.peterd.zombierun.util.GeoPointUtil;
 
 public class Player implements LocationListener, GameEventListener {
 
-  private FloatingPointGeoPoint location;
+  private double lat;
+  private double lon;
   private final Destination destination;
   private final int playerId;
   private final GameEventBroadcaster gameEventBroadcaster;
@@ -37,17 +38,32 @@ public class Player implements LocationListener, GameEventListener {
       GameEventBroadcaster gameEventBroadcaster) {
     this.destination = destination;
     this.playerId = playerId;
-    this.location = location;
+    if (location != null) {
+      this.lat = location.getLatitude();
+      this.lon = location.getLongitude();
+    }
     this.gameEventBroadcaster = gameEventBroadcaster;
   }
   
   /**
    * Get the player's current location.
    * 
+   * Deprecated, please use getLatitude and getLongitude directly to reduce the
+   * number of FloatingPointGeoPoint allocations.
+   * 
    * @return The player's current location, possibly null.
    */
+  @Deprecated
   public FloatingPointGeoPoint getLocation() {
-    return location;
+    return new FloatingPointGeoPoint(lat, lon);
+  }
+  
+  public double getLatitude() {
+    return lat;
+  }
+  
+  public double getLongitude() {
+    return lon;
   }
   
   /**
@@ -55,8 +71,8 @@ public class Player implements LocationListener, GameEventListener {
    */
   @Override
   public String toString() {
-    if (location != null) {
-      return playerId + ":" + location.toString();
+    if (lat != 0 && lon != 0) {
+      return playerId + ":" + FloatingPointGeoPoint.toString(lat, lon);
     } else {
       return Integer.toString(playerId);
     }
@@ -99,21 +115,37 @@ public class Player implements LocationListener, GameEventListener {
     return new Player(destination, playerId, location, gameEventBroadcaster);
   }
 
+  /**
+   * Deprecated in favor of {@link #setLocation(double, double)}.
+   * @param location
+   */
+  @Deprecated
   public void setLocation(FloatingPointGeoPoint location) {
     if (location != null) {
-      this.location = location;
-      Log.d("ZombieRun.Player", "Player location updated to " + this.location);
-      if (GeoPointUtil.distanceMeters(this.location, destination.getLocation()) <
-              Constants.reachDestinationTestDistanceMeters) {
-        gameEventBroadcaster.broadcastEvent(GameEvent.PLAYER_REACHES_DESTINATION);
-      }
+      setLocation(location.getLatitude(), location.getLongitude());
     } else {
       Log.w("ZombieRun.Player", "Player location attempted to be set to null.");
     }
   }
   
+  public void setLocation(double latitude, double longitude) {
+    lat = latitude;
+    lon = longitude;
+    Log.d("ZombieRun.Player", "Player location updated to " +
+        FloatingPointGeoPoint.toString(lat, lon));
+    if (GeoPointUtil.distanceMeters(lat,
+            lon,
+            destination.getLocation().getLatitude(), 
+            destination.getLocation().getLongitude()) <
+                Constants.reachDestinationTestDistanceMeters) {
+      gameEventBroadcaster.broadcastEvent(GameEvent.PLAYER_REACHES_DESTINATION);
+    }
+  }
+  
   public void onLocationChanged(Location location) {
-    setLocation(new FloatingPointGeoPoint(GeoPointUtil.fromLocation(location)));
+    FloatingPointGeoPoint point =
+        new FloatingPointGeoPoint(GeoPointUtil.fromLocation(location));
+    setLocation(point.getLatitude(), point.getLongitude());
   }
 
   public void onProviderDisabled(String provider) { }
