@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import net.peterd.zombierun.R;
-import net.peterd.zombierun.constants.ApplicationConstants;
 import net.peterd.zombierun.constants.BundleConstants;
 import net.peterd.zombierun.constants.Constants;
 import net.peterd.zombierun.constants.Constants.GAME_MENU_OPTION;
@@ -21,11 +20,7 @@ import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.RelativeLayout;
 
-import com.google.ads.AdSenseSpec;
-import com.google.ads.GoogleAdView;
-import com.google.ads.AdSenseSpec.AdType;
 import com.google.android.maps.MapView;
 import com.google.android.maps.MyLocationOverlay;
 
@@ -52,22 +47,6 @@ public class GameMapActivity extends BaseMapActivity {
     super.onCreate(state);
     
     setContentView(R.layout.game);
-
-    // Set up GoogleAdView.
-    GoogleAdView adView = (GoogleAdView) findViewById(R.id.adview);
-    AdSenseSpec adSenseSpec =
-        new AdSenseSpec(getString(R.string.adsense_pub_id))
-        .setCompanyName(getString(R.string.adsense_company_name))
-        .setAppName(getString(R.string.app_name))
-        .setKeywords(getString(R.string.adsense_keywords))
-        .setChannel(getString(R.string.adsense_channel))
-        .setAdType(AdType.TEXT_IMAGE)
-        .setWebEquivalentUrl(getString(R.string.about_url))
-        .setAdTestEnabled(ApplicationConstants.testing());
-    // Fetch Google ad.
-    // PLEASE DO NOT CLICK ON THE AD UNLESS YOU ARE IN TEST MODE.
-    // OTHERWISE, YOUR ACCOUNT MAY BE DISABLED.
-    adView.showAds(adSenseSpec);
 
     service = new GameService(this);
     
