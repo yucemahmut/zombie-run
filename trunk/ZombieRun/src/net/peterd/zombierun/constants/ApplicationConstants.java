@@ -5,7 +5,7 @@ public class ApplicationConstants {
   private static final boolean developing = true;
   
   public static boolean loggingEnabled() {
-    return developing && false;
+    return developing;
   }
   
   public static boolean testing() {
