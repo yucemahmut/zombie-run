@@ -181,7 +181,9 @@ public class Zombie implements GameEventListener {
   }
   
   private void moveTowardPlayer(Player player, double movementDistanceMeters) {
-    Log.d("ZombieRun.Zombie", "Moving towards player " + player.toString());
+    if (Log.loggingEnabled()) {
+      Log.d("ZombieRun.Zombie", "Moving towards player " + player.toString());
+    }
     FloatingPointGeoPoint location = GeoPointUtil.geoPointTowardsTarget(lat, 
         lon, 
         player.getLatitude(), 

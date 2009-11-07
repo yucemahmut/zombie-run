@@ -120,8 +120,10 @@ public class HardwareManager implements GameEventListener, LocationListener {
   }
 
   public void onLocationChanged(Location location) {
-    Log.d("ZombieRun.HardwareManager", "Received updated location, distributing to " +
-        locationListeners.size() + " listeners.");
+    if (Log.loggingEnabled()) {
+      Log.d("ZombieRun.HardwareManager", "Received updated location, distributing to " +
+          locationListeners.size() + " listeners.");
+    }
     for (LocationListener listener : locationListeners) {
       listener.onLocationChanged(location);
     }

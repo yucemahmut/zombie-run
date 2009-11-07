@@ -32,7 +32,10 @@ public class GameEventHandler implements GameEventBroadcaster {
         event == GameEvent.UPDATED_ZOMBIE_LOCATIONS) {
       severity = android.util.Log.DEBUG;
     }
-    Log.println(severity, "ZombieRun.GameEventHandler", "Broadcasting event " + event.name());
+    
+    if (Log.loggingEnabled()) {
+      Log.println(severity, "ZombieRun.GameEventHandler", "Broadcasting event " + event.name());
+    }
     
     for (GameEventListener listener : listeners) {
       listener.receiveEvent(event);
