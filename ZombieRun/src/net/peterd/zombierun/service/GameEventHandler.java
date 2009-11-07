@@ -21,6 +21,11 @@ public class GameEventHandler implements GameEventBroadcaster {
     return listeners.remove(listener);
   }
   
+  public void clearListeners() {
+    Log.d("ZombieRun.GameEventHandler", "Clearing GameEventListeners.");
+    listeners.clear();
+  }
+  
   public void broadcastEvent(GameEvent event) {
     int severity = android.util.Log.INFO;
     if (event == GameEvent.UPDATED_PLAYER_LOCATIONS ||

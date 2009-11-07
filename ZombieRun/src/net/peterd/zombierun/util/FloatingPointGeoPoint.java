@@ -34,8 +34,20 @@ public class FloatingPointGeoPoint {
         (int) Math.round(getLongitude() * 1E6));
   }
   
+  /**
+   * Deprecated in favor of {@link #toString(double, double)}.
+   */
+  @Deprecated
   public String toString() {
-    return latitude + "x" + longitude;
+    return toString(latitude, longitude);
+  }
+  
+  public static String toString(double lat, double lon) {
+    StringBuilder builder = new StringBuilder();
+    builder.append(lat);
+    builder.append("x");
+    builder.append(lon);
+    return builder.toString();
   }
   
   public static FloatingPointGeoPoint fromString(String stringRep) {

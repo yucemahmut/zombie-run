@@ -42,7 +42,10 @@ public class ZombiePopulator {
     GameEventBroadcaster broadcaster = gameEventBroadcaster;
     double averageZombieSpeed = averageZombieSpeedMetersPerSecond;
     
-    maxRadiusMeters = GeoPointUtil.distanceMeters(startingLocation, destination) * 2;
+    maxRadiusMeters = GeoPointUtil.distanceMeters(startingLocation.getLatitude(), 
+        startingLocation.getLongitude(), 
+        destination.getLatitude(),
+        destination.getLongitude()) * 2;
     double areaOfPopulationSquareKilometers = Math.PI * Math.pow(maxRadiusMeters / 1000, 2);
     int zombieCount =
         Math.min(
@@ -57,7 +60,8 @@ public class ZombiePopulator {
           return;
         }
         FloatingPointGeoPoint zombieLocation =
-            GeoPointUtil.getGeoPointNear(clusterCentroid,
+            GeoPointUtil.getGeoPointNear(clusterCentroid.getLatitude(),
+                clusterCentroid.getLongitude(),
                 Math.random() * Constants.maxZombieClusterSizeMeters);
         
         double zombieSpeed =
@@ -80,23 +84,38 @@ public class ZombiePopulator {
   
   private FloatingPointGeoPoint getPlayerDestinationMidpoint() {
     double distanceBetween =
-        GeoPointUtil.distanceMeters(startingLocation, this.destination);
+        GeoPointUtil.distanceMeters(startingLocation.getLatitude(),
+            startingLocation.getLongitude(),
+            destination.getLatitude(),
+            destination.getLongitude());
     return GeoPointUtil.geoPointTowardsTarget(
-        startingLocation,
-        destination,
+        startingLocation.getLatitude(),
+        startingLocation.getLongitude(),
+        destination.getLatitude(),
+        destination.getLongitude(),
         distanceBetween / 2);
   }
   
   private FloatingPointGeoPoint getNewZombieClusterCentroid() {
     FloatingPointGeoPoint startingLocation = this.startingLocation;
+    FloatingPointGeoPoint midPoint = getPlayerDestinationMidpoint();
     FloatingPointGeoPoint candidatePoint =
-        GeoPointUtil.getGeoPointNear(getPlayerDestinationMidpoint(),
+        GeoPointUtil.getGeoPointNear(
+            midPoint.getLatitude(),
+            midPoint.getLongitude(),
             Math.random() * maxRadiusMeters);
     double distanceFromStartingPoint =
-        GeoPointUtil.distanceMeters(startingLocation, candidatePoint);
+        GeoPointUtil.distanceMeters(
+            startingLocation.getLatitude(),
+            startingLocation.getLongitude(),
+            candidatePoint.getLatitude(),
+            candidatePoint.getLongitude());
     if (distanceFromStartingPoint < Constants.minZombieDistanceFromStartingPointMeters) {
-      return GeoPointUtil.geoPointTowardsTarget(startingLocation,
-          candidatePoint,
+      return GeoPointUtil.geoPointTowardsTarget(
+          startingLocation.getLatitude(),
+          startingLocation.getLongitude(),
+          candidatePoint.getLatitude(),
+          candidatePoint.getLongitude(),
           Constants.minZombieDistanceFromStartingPointMeters);
     } else {
       return candidatePoint;

@@ -49,7 +49,7 @@ public class ZombieOverlay extends Overlay implements GameEventListener {
   }
   
   private void initInternalOverlay() {
-    List<Zombie> visibleZombies = new ArrayList<Zombie>();
+    List<Zombie> visibleZombies = new ArrayList<Zombie>(this.zombies.size());
     MapView mapView = this.mapView;
     GeoPoint mapCenter = mapView.getMapCenter();
     int latSpan = mapView.getLatitudeSpan();
@@ -60,13 +60,14 @@ public class ZombieOverlay extends Overlay implements GameEventListener {
     int maxLon = mapCenter.getLongitudeE6() + lonSpan / 2;
     int minLon = mapCenter.getLongitudeE6() - lonSpan / 2;
     
-    Collection<Zombie> zombies = this.zombies;
-    for (Zombie zombie : zombies) {
-      GeoPoint zombieGeoPoint = zombie.getLocation();
-      if (zombieGeoPoint.getLatitudeE6() < maxLat &&
-          zombieGeoPoint.getLatitudeE6() > minLat &&
-          zombieGeoPoint.getLongitudeE6() < maxLon &&
-          zombieGeoPoint.getLongitudeE6() > minLon) {
+    List<Zombie> zombies = this.zombies;
+    // Don't allocate iterators.
+    for (int i = 0; i < zombies.size(); ++i) {
+      Zombie zombie = zombies.get(i);
+      if (zombie.getLatitudeE6() < maxLat &&
+          zombie.getLatitudeE6() > minLat &&
+          zombie.getLongitudeE6() < maxLon &&
+          zombie.getLongitudeE6() > minLon) {
         visibleZombies.add(zombie);
       }
     }
@@ -111,7 +112,7 @@ public class ZombieOverlay extends Overlay implements GameEventListener {
     private final Zombie zombie;
     
     public ZombieOverlayItem(Zombie zombie) {
-      super(zombie.getLocation(), "", "");
+      super(new GeoPoint(zombie.getLatitudeE6(), zombie.getLongitudeE6()), "", "");
       this.zombie = zombie;
     }
     

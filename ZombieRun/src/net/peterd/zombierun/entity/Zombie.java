@@ -1,9 +1,7 @@
 package net.peterd.zombierun.entity;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import net.peterd.zombierun.constants.Constants;
@@ -15,19 +13,20 @@ import net.peterd.zombierun.util.GeoPointUtil;
 
 import net.peterd.zombierun.util.Log;
 
-import com.google.android.maps.GeoPoint;
-
 public class Zombie implements GameEventListener {
 
   private final int id;
+  private double lat;
+  private double lon;
   private final List<Player> players;
-  private final Map<Player, Double> distancesToPlayers = new HashMap<Player, Double>();
   private final double zombieSpeedMetersPerSecond;
   private final GameEventBroadcaster gameEventBroadcaster;
-  private FloatingPointGeoPoint location;
   private boolean isNoticingPlayer = false;
   private boolean isNearPlayer = false;
   private Player playerZombieIsChasing;
+  
+  private Player nearestPlayer = null;
+  private double distanceToNearestPlayer = 0;
   
   public Zombie(int id,
       FloatingPointGeoPoint startingLocation,
@@ -36,7 +35,8 @@ public class Zombie implements GameEventListener {
       double zombieSpeedMetersPerSecond,
       GameEventBroadcaster gameEventBroadcaster) {
     this.id = id;
-    location = startingLocation;
+    lat = startingLocation.getLatitude();
+    lon = startingLocation.getLongitude();
     this.players = players;
     this.playerZombieIsChasing = playerZombieIsChasing;
     this.zombieSpeedMetersPerSecond = zombieSpeedMetersPerSecond;
@@ -51,8 +51,20 @@ public class Zombie implements GameEventListener {
     this(id, startingLocation, players, null, zombieSpeedMetersPerSecond, gameEventBroadcaster);
   }
 
-  public GeoPoint getLocation() {
-    return location.getGeoPoint();
+  public double getLatitude() {
+    return lat;
+  }
+  
+  public int getLatitudeE6() {
+    return (int) (lat * 1e6);
+  }
+  
+  public double getLongitude() {
+    return lon;
+  }
+  
+  public int getLongitudeE6() {
+    return (int) (lon * 1e6);
   }
 
   public boolean isNoticingPlayer() {
@@ -60,7 +72,7 @@ public class Zombie implements GameEventListener {
   }
   
   public void advance(long time, TimeUnit timeUnit) {
-    computeDistancesToPlayers();
+    computeNearestPlayer();
     
     // If we get an interval that's too long, it'll screw up the distance that the zombies move,
     // which can make them completely overshoot or something.
@@ -72,8 +84,7 @@ public class Zombie implements GameEventListener {
     if (hasNoticedPlayer()) {
       Player playerZombieIsChasing = this.playerZombieIsChasing;
       movementDistanceMeters =
-          Math.min(movementDistanceMeters,
-              distancesToPlayers.get(playerZombieIsChasing));
+          Math.min(movementDistanceMeters, distanceToNearestPlayer);
       moveTowardPlayer(playerZombieIsChasing, movementDistanceMeters);
 
       // Setting isNoticingPlayer to true must happen after conditionallyVibrateOnPlayerNoticed, as
@@ -95,12 +106,18 @@ public class Zombie implements GameEventListener {
     }
   }
 
-  private void computeDistancesToPlayers() {
-    for (Player player : players) {
-      FloatingPointGeoPoint playerLocation = player.getLocation();
-      if (playerLocation != null) {
-        double distance = GeoPointUtil.distanceMeters(playerLocation, location);
-        distancesToPlayers.put(player, distance);
+  private void computeNearestPlayer() {
+    distanceToNearestPlayer = Double.MAX_VALUE;
+    // Don't allocate a list iterator.
+    for (int i = 0; i < players.size(); ++i) {
+      Player player = players.get(i);
+      double distance = GeoPointUtil.distanceMeters(lat, 
+          lon, 
+          player.getLatitude(), 
+          player.getLongitude());
+      if (distance < distanceToNearestPlayer) {
+        nearestPlayer = player;
+        distanceToNearestPlayer = distance;
       }
     }
   }
@@ -128,8 +145,7 @@ public class Zombie implements GameEventListener {
    * @return
    */
   private boolean hasCaughtPlayer(Player playerZombieIsChasing) {
-    return distancesToPlayers.get(playerZombieIsChasing) <
-        Constants.zombieCatchPlayerDistanceMeters;
+    return distanceToNearestPlayer < Constants.zombieCatchPlayerDistanceMeters;
   }
   
   /**
@@ -142,30 +158,8 @@ public class Zombie implements GameEventListener {
    *    {@link #distanceToPlayerZombieIsChasing}.
    */
   private boolean hasNoticedPlayer() {
-    if (distancesToPlayers.isEmpty()) {
-      return false;
-    }
-    
-    // If this zombie is already chasing a player, then it should continue chasing that player until
-    // it is no longer interested.
-    if (playerZombieIsChasing != null) {
-      if (distancesToPlayers.get(playerZombieIsChasing) <
-          Constants.zombieNoticePlayerDistanceMeters) {
-        return true;
-      }
-    }
-    
-    Double minDistanceToPlayer = null;
-    Player playerWithMinimumDistance = null;
-    for (Map.Entry<Player, Double> entry : distancesToPlayers.entrySet()) {
-      if (minDistanceToPlayer == null || entry.getValue() < minDistanceToPlayer) {
-        minDistanceToPlayer = entry.getValue();
-        playerWithMinimumDistance = entry.getKey();
-      }
-    }
-    
-    if (minDistanceToPlayer < Constants.zombieNoticePlayerDistanceMeters) {
-      playerZombieIsChasing = playerWithMinimumDistance;
+    if (distanceToNearestPlayer < Constants.zombieNoticePlayerDistanceMeters) {
+      playerZombieIsChasing = nearestPlayer;
       return true;
     } else {
       playerZombieIsChasing = null;
@@ -174,20 +168,27 @@ public class Zombie implements GameEventListener {
   }
   
   private boolean isNearPlayer(Player player) {
-    return distancesToPlayers.get(player) < Constants.zombieNearPlayerDistanceMeters;
+    return distanceToNearestPlayer < Constants.zombieNearPlayerDistanceMeters;
   }
   
   private void meander(double movementDistanceMeters) {
     // TODO: Give them a primary direction, not just random movements.
     // TODO: Make zombies cluster a little bit
-    location = GeoPointUtil.getGeoPointNear(location, movementDistanceMeters);
+    FloatingPointGeoPoint location = 
+      GeoPointUtil.getGeoPointNear(lat, lon, movementDistanceMeters);
+    lat = location.getLatitude();
+    lon = location.getLongitude();
   }
   
   private void moveTowardPlayer(Player player, double movementDistanceMeters) {
     Log.d("ZombieRun.Zombie", "Moving towards player " + player.toString());
-    location = GeoPointUtil.geoPointTowardsTarget(location,
-        player.getLocation(),
+    FloatingPointGeoPoint location = GeoPointUtil.geoPointTowardsTarget(lat, 
+        lon, 
+        player.getLatitude(), 
+        player.getLongitude(),
         movementDistanceMeters);
+    lat = location.getLatitude();
+    lon = location.getLongitude();
   }
   
   public String toString() {
@@ -195,10 +196,15 @@ public class Zombie implements GameEventListener {
     if (playerZombieIsChasing != null) {
       indexOfPlayerZombieIsChasing = players.indexOf(playerZombieIsChasing);
     }
-    return id + ":" +
-        Integer.toString(indexOfPlayerZombieIsChasing) + ":" +
-        location.toString() + ":" +
-        zombieSpeedMetersPerSecond;
+    StringBuilder builder = new StringBuilder();
+    builder.append(id);
+    builder.append(":");
+    builder.append(indexOfPlayerZombieIsChasing);
+    builder.append(":");
+    builder.append(FloatingPointGeoPoint.toString(lat, lon));
+    builder.append(":");
+    builder.append(zombieSpeedMetersPerSecond);
+    return builder.toString();
   }
   
   public static Zombie fromString(String stringEncodedZombie,

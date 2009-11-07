@@ -73,9 +73,10 @@ public class GameState {
   
   public void AdvanceZombies(long deltaTimeMs) {
     Log.d("ZombieRun.GameState", "Advancing Zombies.");
-    Collection<Zombie> zombies = getZombies();
-    for (Zombie zombie : zombies) {
-      zombie.advance(deltaTimeMs, TimeUnit.MILLISECONDS);
+    List<Zombie> zombies = getZombies();
+    // don't allocate a list iterator object.
+    for (int i = 0; i < zombies.size(); ++i) {
+      zombies.get(i).advance(deltaTimeMs, TimeUnit.MILLISECONDS);
     }
   }
 }
