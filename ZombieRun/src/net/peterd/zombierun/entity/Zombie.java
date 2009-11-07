@@ -174,6 +174,7 @@ public class Zombie implements GameEventListener {
   private void meander(double movementDistanceMeters) {
     // TODO: Give them a primary direction, not just random movements.
     // TODO: Make zombies cluster a little bit
+    // TODO: Try to optimize out allocating this FloatingPointGeoPoint
     FloatingPointGeoPoint location = 
       GeoPointUtil.getGeoPointNear(lat, lon, movementDistanceMeters);
     lat = location.getLatitude();
