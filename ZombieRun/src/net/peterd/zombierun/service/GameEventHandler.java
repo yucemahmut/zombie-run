@@ -2,6 +2,7 @@ package net.peterd.zombierun.service;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.WeakHashMap;
 
 import net.peterd.zombierun.game.GameEvent;
 
@@ -9,24 +10,32 @@ import net.peterd.zombierun.util.Log;
 
 public class GameEventHandler implements GameEventBroadcaster {
 
-  private final Set<GameEventListener> listeners = new HashSet<GameEventListener>();
+  // We use a weak hash map to ensure that if an object is added to this as a
+  // listener, but never removes itself, we won't keep it from being
+  // garbage collected.
+  private final WeakHashMap<GameEventListener, Boolean> listeners =
+      new WeakHashMap<GameEventListener, Boolean>();
 
-  public boolean addListener(GameEventListener listener) {
+  public synchronized boolean addListener(GameEventListener listener) {
     Log.d("ZombieRun.GameEventHandler", "Adding GameEventListener " + listener.toString());
-    return listeners.add(listener);
+    if (listeners.put(listener, true) == null) {
+      return true;
+    } else {
+      return false;
+    }
   }
   
-  public boolean removeListener(GameEventListener listener) {
+  public synchronized boolean removeListener(GameEventListener listener) {
     Log.d("ZombieRun.GameEventHandler", "Removing GameEventListener " + listener.toString());
     return listeners.remove(listener);
   }
   
-  public void clearListeners() {
+  public synchronized void clearListeners() {
     Log.d("ZombieRun.GameEventHandler", "Clearing GameEventListeners.");
     listeners.clear();
   }
   
-  public void broadcastEvent(GameEvent event) {
+  public synchronized void broadcastEvent(GameEvent event) {
     int severity = android.util.Log.INFO;
     if (event == GameEvent.UPDATED_PLAYER_LOCATIONS ||
         event == GameEvent.UPDATED_ZOMBIE_LOCATIONS) {
@@ -36,9 +45,11 @@ public class GameEventHandler implements GameEventBroadcaster {
     if (Log.loggingEnabled()) {
       Log.println(severity, "ZombieRun.GameEventHandler", "Broadcasting event " + event.name());
     }
-    
-    for (GameEventListener listener : listeners) {
-      listener.receiveEvent(event);
+
+    for (GameEventListener listener : listeners.keySet()) {
+      if (listener != null) {
+        listener.receiveEvent(event);
+      }
     }
   }
 }
