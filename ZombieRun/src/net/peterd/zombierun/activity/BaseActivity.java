@@ -2,11 +2,12 @@
 
 package net.peterd.zombierun.activity;
 
+import net.peterd.zombierun.util.Log;
+
 import com.google.android.apps.analytics.GoogleAnalyticsTracker;
 
 import android.app.Activity;
 import android.content.Context;
-import android.util.Log;
 
 public class BaseActivity extends Activity {
 

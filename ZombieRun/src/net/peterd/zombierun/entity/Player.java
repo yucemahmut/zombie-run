@@ -131,8 +131,10 @@ public class Player implements LocationListener, GameEventListener {
   public void setLocation(double latitude, double longitude) {
     lat = latitude;
     lon = longitude;
-    Log.d("ZombieRun.Player", "Player location updated to " +
-        FloatingPointGeoPoint.toString(lat, lon));
+    if (Log.loggingEnabled()) {
+      Log.d("ZombieRun.Player", "Player location updated to " +
+          FloatingPointGeoPoint.toString(lat, lon));
+    }
     if (GeoPointUtil.distanceMeters(lat,
             lon,
             destination.getLocation().getLatitude(), 

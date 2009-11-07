@@ -93,7 +93,6 @@ public abstract class Game extends GameMapActivity implements GameEventListener 
     ZombieOverlay overlay =
         new ZombieOverlay(
             service.getGameState().getZombies(),
-            map,
             zombieMeanderingDrawable,
             zombieNoticingPlayerDrawable);
     service.getEventHandler().addListener(overlay);
