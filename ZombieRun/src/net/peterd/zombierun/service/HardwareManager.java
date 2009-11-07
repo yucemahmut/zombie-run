@@ -22,10 +22,10 @@ public class HardwareManager implements GameEventListener, LocationListener {
   private Vibrator vibrator;
   private LocationManager locationManager;
   private String bestLocationProvider;
-  private final Activity activity;
   
   public HardwareManager(Activity activity) {
-    this.activity = activity;
+    locationManager = (LocationManager) activity.getSystemService(Activity.LOCATION_SERVICE);
+    vibrator = (Vibrator) activity.getSystemService(Activity.VIBRATOR_SERVICE);
   }
   
   /**
@@ -56,7 +56,6 @@ public class HardwareManager implements GameEventListener, LocationListener {
   }
   
   private Integer initializeLocationManager() {
-    locationManager = (LocationManager) activity.getSystemService(Activity.LOCATION_SERVICE);
     Criteria criteria = new Criteria();
     criteria.setAccuracy(Criteria.ACCURACY_FINE);
     criteria.setAltitudeRequired(true);
@@ -70,7 +69,6 @@ public class HardwareManager implements GameEventListener, LocationListener {
   }
   
   private Integer initializeVibrator() {
-    vibrator = (Vibrator) activity.getSystemService(Activity.VIBRATOR_SERVICE);
     return vibrator == null ? R.string.error_no_vibrator : null;
   }
 
