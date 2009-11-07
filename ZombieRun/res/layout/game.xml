@@ -4,12 +4,13 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     >
-	 <!-- Development api key -->
+	 <!-- Development api key: 0gTCqChu4DUqe2dV43qCoKiESfKV2kqpIBET7ZQ -->
+	 <!-- Release api key: 0gTCqChu4DUqkXOwb2YWPgLrw2kUJqt_fdbmwGw -->
 	 <com.google.android.maps.MapView
 	     android:id="@+id/mapview"
 	     android:layout_width="fill_parent"
 	     android:layout_height="fill_parent"
 	     android:clickable="true"
-	     android:apiKey="0gTCqChu4DUqe2dV43qCoKiESfKV2kqpIBET7ZQ"
+	     android:apiKey="0gTCqChu4DUqkXOwb2YWPgLrw2kUJqt_fdbmwGw"
 	     />
 </RelativeLayout>
