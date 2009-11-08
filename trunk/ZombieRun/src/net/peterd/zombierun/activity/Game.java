@@ -69,6 +69,10 @@ public abstract class Game extends GameMapActivity implements GameEventListener 
     initializeZombieOverlay(mapView);
   }
   
+  protected boolean showAds() {
+    return false;
+  }
+  
   protected void onResume() {
     super.onResume();
     service.getEventHandler().addListener(this);

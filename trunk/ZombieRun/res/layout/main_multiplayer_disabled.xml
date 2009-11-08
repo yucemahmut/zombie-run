@@ -3,62 +3,74 @@
     android:orientation="horizontal"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    android:padding="15dip"
     >
-  <TextView android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:textSize="24sp"
-    android:layout_centerHorizontal="true"
-    android:id="@+id/title_box"
-    android:text="@string/app_name" />
-
-  <TextView android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:id="@+id/spinner_zombie_count_text"
-    android:text="@string/spinner_zombie_count_text"
-    android:layout_centerHorizontal="true"
-    android:layout_below="@id/title_box"
-    android:layout_marginTop="15dip" />
-  <Spinner android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:id="@+id/spinner_zombie_count"
-    android:prompt="@string/spinner_zombie_count_text"
-    android:layout_centerHorizontal="true"
-    android:layout_marginTop="5dip"
-    android:layout_below="@id/spinner_zombie_count_text"
-    android:entries="@array/zombie_counts_str" />
-
-  <TextView android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:id="@+id/spinner_zombie_speed_text"
-    android:text="@string/spinner_zombie_speed_text"
-    android:layout_centerHorizontal="true"
-    android:layout_below="@id/spinner_zombie_count"
-    android:layout_marginTop="10dip" />
-  <Spinner android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:id="@+id/spinner_zombie_speed"
-    android:prompt="@string/spinner_zombie_speed_text"
-    android:layout_centerHorizontal="true"
-    android:layout_marginTop="5dip"
-    android:layout_below="@id/spinner_zombie_speed_text"
-    android:entries="@array/zombie_speeds_str" />
-
-  <Button android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:id="@+id/button_start_singleplayer"
-    android:clickable="true"
-    android:layout_centerHorizontal="true"
-    android:layout_marginTop="20dip"
-    android:layout_below="@id/spinner_zombie_speed"
-    android:text="Start Game" />
-
-  <Button android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:id="@+id/button_help"
-    android:clickable="true"
-    android:layout_centerHorizontal="true"
-    android:layout_marginTop="20dip"
-    android:layout_below="@id/button_start_singleplayer"
-    android:text="@string/help_button_text" />
+	<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	    android:orientation="horizontal"
+	    android:layout_width="fill_parent"
+	    android:layout_height="fill_parent"
+	    android:padding="15dip"
+	    android:id="@+id/main_relative_layout"
+	    >
+	  <TextView android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:textSize="24sp"
+	    android:layout_centerHorizontal="true"
+	    android:id="@+id/title_box"
+	    android:text="@string/app_name" />
+	
+	  <TextView android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:id="@+id/spinner_zombie_count_text"
+	    android:text="@string/spinner_zombie_count_text"
+	    android:layout_centerHorizontal="true"
+	    android:layout_below="@id/title_box"
+	    android:layout_marginTop="15dip" />
+	  <Spinner android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:id="@+id/spinner_zombie_count"
+	    android:prompt="@string/spinner_zombie_count_text"
+	    android:layout_centerHorizontal="true"
+	    android:layout_marginTop="5dip"
+	    android:layout_below="@id/spinner_zombie_count_text"
+	    android:entries="@array/zombie_counts_str" />
+	
+	  <TextView android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:id="@+id/spinner_zombie_speed_text"
+	    android:text="@string/spinner_zombie_speed_text"
+	    android:layout_centerHorizontal="true"
+	    android:layout_below="@id/spinner_zombie_count"
+	    android:layout_marginTop="10dip" />
+	  <Spinner android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:id="@+id/spinner_zombie_speed"
+	    android:prompt="@string/spinner_zombie_speed_text"
+	    android:layout_centerHorizontal="true"
+	    android:layout_marginTop="5dip"
+	    android:layout_below="@id/spinner_zombie_speed_text"
+	    android:entries="@array/zombie_speeds_str" />
+	
+	  <Button android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:id="@+id/button_start_singleplayer"
+	    android:clickable="true"
+	    android:layout_centerHorizontal="true"
+	    android:layout_marginTop="20dip"
+	    android:layout_below="@id/spinner_zombie_speed"
+	    android:text="Start Game" />
+	
+	  <Button android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:id="@+id/button_help"
+	    android:clickable="true"
+	    android:layout_centerHorizontal="true"
+	    android:layout_marginTop="20dip"
+	    android:layout_below="@id/button_start_singleplayer"
+	    android:text="@string/help_button_text" />
+	</RelativeLayout>
+  <com.google.ads.GoogleAdView
+      android:id="@+id/adview"
+      android:layout_width="fill_parent"
+      android:layout_height="wrap_content"
+      android:layout_alignBottom="@+id/main_relative_layout" />
 </RelativeLayout>

@@ -60,6 +60,10 @@ public class StartGame extends BaseActivity {
       menuOptions.add(GAME_MENU_OPTION.SATELLITE_VIEW);
       menuOptions.add(GAME_MENU_OPTION.STOP);
     }
+    
+    protected boolean showAds() {
+      return true;
+    }
 
     @Override
     public void onCreate(Bundle state) {
