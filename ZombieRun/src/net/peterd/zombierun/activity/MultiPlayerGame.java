@@ -16,6 +16,5 @@ public class MultiPlayerGame extends Game {
           localService.joinMultiPlayerGame(extras.getInt(BundleConstants.GAME_ID));
         }
       }).start();
-    
   }
 }

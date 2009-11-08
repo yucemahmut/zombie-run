@@ -19,5 +19,5 @@ public class BaseMapActivity extends MapActivity {
   protected boolean isRouteDisplayed() {
     return false;
   }
-
+  
 }

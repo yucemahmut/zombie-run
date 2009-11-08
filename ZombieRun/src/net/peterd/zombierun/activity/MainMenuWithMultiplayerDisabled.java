@@ -39,5 +39,7 @@ public class MainMenuWithMultiplayerDisabled extends MainMenu {
           startActivity(showHelpIntent);
         }
       });    
+
+    Util.configureAds(this);
   }
 }

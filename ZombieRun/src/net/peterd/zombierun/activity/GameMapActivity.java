@@ -30,7 +30,7 @@ import com.google.android.maps.MyLocationOverlay;
  *
  * @author Peter Dolan (peterjdolan@gmail.com)
  */
-public class GameMapActivity extends BaseMapActivity {
+public abstract class GameMapActivity extends BaseMapActivity {
 
   protected GameService service;
   protected final Collection<GAME_MENU_OPTION> menuOptions = new ArrayList<GAME_MENU_OPTION>();
@@ -83,7 +83,13 @@ public class GameMapActivity extends BaseMapActivity {
     if (state != null) {
       onRestoreInstanceState(state);
     }
+    
+    if (showAds()) {
+      Util.configureAds(this);
+    }
   }
+  
+  protected abstract boolean showAds();
   
   @Override
   protected void onRestart() {
