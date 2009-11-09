@@ -16,6 +16,7 @@ import net.peterd.zombierun.util.Log;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -30,7 +31,7 @@ import com.google.android.maps.MyLocationOverlay;
  *
  * @author Peter Dolan (peterjdolan@gmail.com)
  */
-public abstract class GameMapActivity extends BaseMapActivity {
+public class GameMapActivity extends BaseMapActivity {
 
   protected GameService service;
   protected final Collection<GAME_MENU_OPTION> menuOptions = new ArrayList<GAME_MENU_OPTION>();
@@ -83,13 +84,7 @@ public abstract class GameMapActivity extends BaseMapActivity {
     if (state != null) {
       onRestoreInstanceState(state);
     }
-    
-    if (showAds()) {
-      Util.configureAds(this);
-    }
   }
-  
-  protected abstract boolean showAds();
   
   @Override
   protected void onRestart() {
@@ -112,6 +107,15 @@ public abstract class GameMapActivity extends BaseMapActivity {
     service.getEventHandler().broadcastEvent(GameEvent.GAME_RESUME);
     Log.d("ZombieRun.GameMapActivity", "enabling mylocationoverlay");
     myLocationOverlay.enableMyLocation();
+    
+  }
+
+  @Override
+  public void onConfigurationChanged(Configuration configuration) {
+    super.onConfigurationChanged(configuration);
+
+    // Do nothing.  We don't do orientation changes in the game screen.
+    Log.d("ZombieRun.GameMapActivity", "onConfigurationChanged handled.");
   }
   
   @Override
@@ -125,6 +129,7 @@ public abstract class GameMapActivity extends BaseMapActivity {
   @Override
   public void onRestoreInstanceState(Bundle state) {
     super.onRestoreInstanceState(state);
+    Log.d("ZombieRun.GameMapActivity", "onRestoreInstanceState");
     if (mapView != null &&
         state != null &&
         state.containsKey(BundleConstants.MAP_MODE_IS_SATELLITE)) {
@@ -140,6 +145,7 @@ public abstract class GameMapActivity extends BaseMapActivity {
   @Override
   public void onSaveInstanceState(Bundle state) {
     super.onSaveInstanceState(state);
+    Log.d("ZombieRun.GameMapActivity", "onSaveInstanceState");
     state.putBoolean(BundleConstants.MAP_MODE_IS_SATELLITE, mapView.isSatellite());
     service.onSaveInstanceState(state);
     if (gameSettings != null) {

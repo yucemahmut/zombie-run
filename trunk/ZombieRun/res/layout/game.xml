@@ -13,9 +13,4 @@
 	     android:clickable="true"
 	     android:apiKey="0gTCqChu4DUqkXOwb2YWPgLrw2kUJqt_fdbmwGw"
 	     />
-  <com.google.ads.GoogleAdView
-      android:id="@+id/adview"
-      android:layout_width="fill_parent"
-      android:layout_height="wrap_content"
-      android:layout_alignTop="@+id/mapview" />
 </RelativeLayout>
