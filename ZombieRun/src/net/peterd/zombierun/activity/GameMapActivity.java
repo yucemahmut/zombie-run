@@ -16,7 +16,6 @@ import net.peterd.zombierun.util.Log;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.res.Configuration;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -206,17 +205,19 @@ public class GameMapActivity extends BaseMapActivity {
     quitGameIntent.putExtra(BundleConstants.GAME_WON, false);
     new AlertDialog.Builder(this)
         .setMessage(R.string.confirm_menu_stop)
-        .setPositiveButton("Yep.", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-              gameEventBroadcaster.broadcastEvent(GameEvent.GAME_QUIT);
-              startActivity(quitGameIntent);
-            }
-          })
-        .setNegativeButton("Actually, No.", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-              // Nothing, just go back to the game. 
-            }
-          })
+        .setPositiveButton(getString(R.string.quit_confirm),
+            new DialogInterface.OnClickListener() {
+              public void onClick(DialogInterface dialog, int which) {
+                gameEventBroadcaster.broadcastEvent(GameEvent.GAME_QUIT);
+                startActivity(quitGameIntent);
+              }
+            })
+        .setNegativeButton(getString(R.string.quit_cancel),
+            new DialogInterface.OnClickListener() {
+              public void onClick(DialogInterface dialog, int which) {
+                // Nothing, just go back to the game. 
+              }
+            })
         .show();
   }
 }

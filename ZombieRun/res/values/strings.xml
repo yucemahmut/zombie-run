@@ -45,4 +45,7 @@
 	<string name="adsense_keywords">android+phones,android+games,causal+gaming,android+accessories,zombies,zombie+movie,movies,running</string>
 	<string name="adsense_channel">ZombieRun</string>
 	<string name="about_url">http://www.zrli.org/zombierun/</string>
+	
+	<string name="quit_confirm">Yep.</string>
+	<string name="quit_cancel">Actually, No.</string>
 </resources>
