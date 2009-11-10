@@ -91,9 +91,12 @@ public class HardwareManager implements GameEventListener, LocationListener {
   }
   
   public FloatingPointGeoPoint getLastKnownLocation() {
-    return new FloatingPointGeoPoint(
-        GeoPointUtil.fromLocation(
-            locationManager.getLastKnownLocation(bestLocationProvider)));
+    Location location = locationManager.getLastKnownLocation(bestLocationProvider);
+    if (location == null) {
+      return null;
+    } else {
+      return new FloatingPointGeoPoint(GeoPointUtil.fromLocation(location));
+    }
   }
   
   public void receiveEvent(GameEvent event) {
