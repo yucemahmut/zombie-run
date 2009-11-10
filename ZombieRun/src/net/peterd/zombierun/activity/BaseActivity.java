@@ -8,6 +8,7 @@ import com.google.android.apps.analytics.GoogleAnalyticsTracker;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.res.Configuration;
 
 public class BaseActivity extends Activity {
 
@@ -15,6 +16,15 @@ public class BaseActivity extends Activity {
   public void onStart() {
     super.onStart();
     logToAnalytics(this);
+  }
+  
+
+  @Override
+  public void onConfigurationChanged(Configuration configuration) {
+    super.onConfigurationChanged(configuration);
+
+    // Do nothing.  We don't do orientation changes in the game screen.
+    Log.d("ZombieRun.GameMapActivity", "onConfigurationChanged handled.");
   }
   
   protected static void logToAnalytics(Context context) {

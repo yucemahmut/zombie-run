@@ -38,14 +38,11 @@
   <string name="start_multiplayer_game_button_text">Create New Multi Player Game</string>
   <string name="join_multiplayer_game_button_text">Join Multi Player Game</string>
   <string name="help_button_text">Help</string>
-  
-  <!--  Strings for the update checker -->
-  
-  
-  
-<string name="adsense_pub_id">ca-mb-app-pub-5257925350964339</string>
-<string name="adsense_company_name">Zombie Research Labs</string>
-<string name="adsense_keywords">android+phones,android+games,causal+gaming,android+accessories,zombies,zombie+movie,movies,running</string>
-<string name="adsense_channel">ZombieRun</string>
-<string name="about_url">http://www.zrli.org/zombierun/</string>
+
+  <!-- Strings for Adsense -->  
+	<string name="adsense_pub_id">ca-mb-app-pub-5257925350964339</string>
+	<string name="adsense_company_name">Zombie Research Labs</string>
+	<string name="adsense_keywords">android+phones,android+games,causal+gaming,android+accessories,zombies,zombie+movie,movies,running</string>
+	<string name="adsense_channel">ZombieRun</string>
+	<string name="about_url">http://www.zrli.org/zombierun/</string>
 </resources>
