@@ -109,14 +109,6 @@ public class GameMapActivity extends BaseMapActivity {
     myLocationOverlay.enableMyLocation();
     
   }
-
-  @Override
-  public void onConfigurationChanged(Configuration configuration) {
-    super.onConfigurationChanged(configuration);
-
-    // Do nothing.  We don't do orientation changes in the game screen.
-    Log.d("ZombieRun.GameMapActivity", "onConfigurationChanged handled.");
-  }
   
   @Override
   protected void onPause() {

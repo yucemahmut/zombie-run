@@ -17,53 +17,74 @@
     <!-- Alphabetical -->
     <activity android:name=".activity.About"
               android:label="About"
-              android:screenOrientation="portrait" />
+              android:screenOrientation="portrait" 
+              android:configChanges="keyboardHidden|orientation" 
+              />
     <activity android:name=".activity.JoinMultiPlayerGame"
               android:label="JoinMultiPlayerGame" 
-              android:screenOrientation="portrait" />
+              android:screenOrientation="portrait" 
+              android:configChanges="keyboardHidden|orientation" 
+              />
     <activity android:name=".activity.MainMenuWithMultiplayerDisabled" 
-              android:label="MainMenu_WithMultiplayerDisabled" />
+              android:label="MainMenu_WithMultiplayerDisabled" 
+              android:screenOrientation="portrait" 
+              android:configChanges="keyboardHidden|orientation" 
+              />
     <activity android:name=".activity.MainMenuWithMultiplayerEnabled" 
-              android:label="MainMenu_WithMultiplayerEnabled" />
+              android:label="MainMenu_WithMultiplayerEnabled" 
+              android:screenOrientation="portrait" 
+              android:configChanges="keyboardHidden|orientation" 
+              />
     <activity android:name=".activity.MultiPlayerEntry" 
               android:label="MultiPlayerEntry" 
               android:screenOrientation="portrait" 
-              android:configChanges="keyboardHidden|orientation" />
+              android:configChanges="keyboardHidden|orientation" 
+              />
     <activity android:name=".activity.MultiPlayerGame" 
               android:label="MultiPlayerGame"  
               android:screenOrientation="portrait" 
-              android:configChanges="keyboardHidden|orientation" />
+              android:configChanges="keyboardHidden|orientation" 
+              />
     <activity android:name=".activity.OwnedMultiPlayerGame" 
               android:label="OwnedMultiPlayerGame" 
               android:screenOrientation="portrait" 
-              android:configChanges="keyboardHidden|orientation" />
+              android:configChanges="keyboardHidden|orientation" 
+              />
     <activity android:name=".activity.SinglePlayerEntry" 
               android:label="SinglePlayerEntry" 
               android:screenOrientation="portrait" 
-              android:configChanges="keyboardHidden|orientation" />
+              android:configChanges="keyboardHidden|orientation" 
+              />
     <activity android:name=".activity.SinglePlayerGame" 
               android:label="SinglelayerGame" 
               android:screenOrientation="portrait" 
-              android:configChanges="keyboardHidden|orientation" />
+              android:configChanges="keyboardHidden|orientation" 
+              />
     <activity android:name=".activity.StartGame" 
               android:label="StartGame" 
               android:screenOrientation="portrait" 
-              android:configChanges="keyboardHidden|orientation" />
+              android:configChanges="keyboardHidden|orientation" 
+              />
     <activity android:name=".activity.StartGame$WaitingForFirstFixActivity" 
               android:label="StartGame_WaitingForFirstFix" 
               android:screenOrientation="portrait" 
-              android:configChanges="keyboardHidden|orientation" />
+              android:configChanges="keyboardHidden|orientation" 
+              />
     <activity android:name=".activity.StartGame$ShowingPickDestinationMessageActivity" 
               android:label="StartGame_ShowingPickDestinationMessage" 
               android:screenOrientation="portrait" 
-              android:configChanges="keyboardHidden|orientation" />
+              android:configChanges="keyboardHidden|orientation" 
+              />
     <activity android:name=".activity.StartGame$PickingDestinationActivity" 
               android:label="StartGame_PickingDestination" 
               android:screenOrientation="portrait" 
-              android:configChanges="keyboardHidden|orientation" />
+              android:configChanges="keyboardHidden|orientation" 
+              />
     <activity android:name=".activity.WinOrLoseGame" 
               android:label="WinOrLoseGame" 
-              android:screenOrientation="portrait" />
+              android:screenOrientation="portrait" 
+              android:configChanges="keyboardHidden|orientation" 
+              />
     
     <!-- Used for install referrer tracking -->
     <receiver android:name="com.google.android.apps.analytics.AnalyticsReceiver"
