@@ -12,6 +12,7 @@ import net.peterd.zombierun.entity.Destination;
 import net.peterd.zombierun.overlay.DestinationOverlay;
 import net.peterd.zombierun.service.HardwareManager;
 import net.peterd.zombierun.util.FloatingPointGeoPoint;
+import net.peterd.zombierun.util.GeoPointUtil;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -180,7 +181,11 @@ public class StartGame extends BaseActivity {
     @Override
     public void onLocationChanged(Location location) {
       super.onLocationChanged(location);
-      startActivity(new Intent(this, ShowingPickDestinationMessageActivity.class));
+      if (location != null) {
+        mapView.getController().animateTo(GeoPointUtil.fromLocation(location));
+        mapView.getController().setZoom(15);
+        startActivity(new Intent(this, ShowingPickDestinationMessageActivity.class));
+      }
     }
   }
   
@@ -189,9 +194,12 @@ public class StartGame extends BaseActivity {
     public void onCreate(Bundle state) {
       super.onCreate(state);
       
-      mapView.getController().animateTo(
-          service.getHardwareManager().getLastKnownLocation().getGeoPoint());
-      mapView.getController().setZoom(15);
+      FloatingPointGeoPoint lastKnownLocation =
+          service.getHardwareManager().getLastKnownLocation();
+      if (lastKnownLocation != null) {
+        mapView.getController().animateTo(lastKnownLocation.getGeoPoint());
+        mapView.getController().setZoom(15);
+      }
       
       final Intent beginPickingDestinationIntent =
           new Intent(this, PickingDestinationActivity.class);
