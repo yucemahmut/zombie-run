@@ -25,6 +25,7 @@
   <!-- Winning and losing strings -->
   <string name="message_win">Survival!</string>
   <string name="message_lose">AAAH!  Braaaaaains!</string>
+  <string name="new_game_button">New Game</string>
 
   <!-- Main menu strings -->  
   <string name="app_name">Zombie, Run!</string>
@@ -32,9 +33,10 @@
   <string name="header_multiplayer_entry">Multiplayer Game</string>
   <string name="spinner_zombie_count_text">Type of Outbreak (zombie density)</string>
   <string name="spinner_zombie_speed_text">Type of Zombie (zombie speed)</string>
+  <string name="start_game_button_text">Start Game</string>
   <string name="singleplayer_game_entry_button_text">Start Single Player Game</string>
   <string name="multiplayer_game_entry_button_text">Start Multiplayer Game</string>
-  <string name="start_game_button_text">Start Single Player Game</string>
+  <string name="start_singleplayer_game_button_text">Start Single Player Game</string>
   <string name="start_multiplayer_game_button_text">Create New Multi Player Game</string>
   <string name="join_multiplayer_game_button_text">Join Multi Player Game</string>
   <string name="help_button_text">Help</string>
