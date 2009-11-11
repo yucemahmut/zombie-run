@@ -2,7 +2,7 @@ package net.peterd.zombierun.constants;
 
 public class ApplicationConstants {
 
-  private static final boolean developing = false;
+  private static final boolean developing = true;
   
   public static boolean loggingEnabled() {
     return developing;

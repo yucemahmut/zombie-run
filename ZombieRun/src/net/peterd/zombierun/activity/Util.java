@@ -8,6 +8,7 @@ import net.peterd.zombierun.R;
 import net.peterd.zombierun.constants.ApplicationConstants;
 import net.peterd.zombierun.game.GameSettings;
 import net.peterd.zombierun.util.GeoCalculationUtil;
+import net.peterd.zombierun.util.Log;
 import android.app.Activity;
 import android.os.Handler;
 import android.widget.Spinner;
@@ -36,6 +37,7 @@ public class Util {
   }
   
   public static void configureAds(final Activity activity) {
+    Log.i("ZombieRun.Util", "Adsense Ads Keywords: " + activity.getString(R.string.adsense_keywords));
     final GoogleAdView adView = 
         (GoogleAdView) activity.findViewById(R.id.adview);
     new Handler().post(new Runnable() {

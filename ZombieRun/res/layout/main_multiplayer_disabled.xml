@@ -57,7 +57,7 @@
 	    android:layout_centerHorizontal="true"
 	    android:layout_marginTop="20dip"
 	    android:layout_below="@id/spinner_zombie_speed"
-	    android:text="Start Game" />
+	    android:text="@string/start_game_button_text" />
 	
 	  <Button android:layout_width="wrap_content"
 	    android:layout_height="wrap_content"
