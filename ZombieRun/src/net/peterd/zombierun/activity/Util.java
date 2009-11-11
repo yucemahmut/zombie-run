@@ -37,7 +37,10 @@ public class Util {
   }
   
   public static void configureAds(final Activity activity) {
-    Log.i("ZombieRun.Util", "Adsense Ads Keywords: " + activity.getString(R.string.adsense_keywords));
+    if (Log.loggingEnabled()) {
+      Log.d("ZombieRun.Util", 
+          "Adsense Ads Keywords: " + activity.getString(R.string.adsense_keywords));
+    }
     final GoogleAdView adView = 
         (GoogleAdView) activity.findViewById(R.id.adview);
     new Handler().post(new Runnable() {
