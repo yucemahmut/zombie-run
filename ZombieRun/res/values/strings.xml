@@ -50,4 +50,6 @@
 	
 	<string name="quit_confirm">Yep.</string>
 	<string name="quit_cancel">Actually, No.</string>
+	<string name="yes">Yes</string>
+	<string name="no">No</string>
 </resources>
