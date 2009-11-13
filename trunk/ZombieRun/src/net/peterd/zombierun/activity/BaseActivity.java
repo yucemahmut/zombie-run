@@ -11,6 +11,8 @@ import android.content.Context;
 import android.content.res.Configuration;
 
 public class BaseActivity extends Activity {
+  
+  private static GoogleAnalyticsTracker tracker;
 
   @Override
   public void onStart() {
@@ -27,9 +29,11 @@ public class BaseActivity extends Activity {
     Log.d("ZombieRun.GameMapActivity", "onConfigurationChanged handled.");
   }
   
-  protected static void logToAnalytics(Context context) {
-    GoogleAnalyticsTracker tracker = GoogleAnalyticsTracker.getInstance();
-    tracker.start("UA-214814-13", context);
+  protected synchronized static void logToAnalytics(Context context) {
+    if (tracker == null) {
+      tracker = GoogleAnalyticsTracker.getInstance();
+      tracker.start("UA-214814-13", context);
+    }
     String pageView = "/action/" + context.getClass().getSimpleName();
     Log.d("ZombieRun.BaseActivity", pageView);
     tracker.trackPageView(pageView);
