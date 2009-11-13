@@ -234,12 +234,12 @@ public class StartGame extends BaseActivity {
       
       new AlertDialog.Builder(this)
           .setMessage(R.string.message_confirm_destination)
-          .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+          .setPositiveButton(getString(R.string.yes), new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface dialog, int which) {
                   startActivity(startGameIntent);
                 }
               })
-          .setNegativeButton("No", new DialogInterface.OnClickListener() {
+          .setNegativeButton(getString(R.string.no), new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface dialog, int which) {
                   // Do nothing, just let another destination be chosen.
                 }
