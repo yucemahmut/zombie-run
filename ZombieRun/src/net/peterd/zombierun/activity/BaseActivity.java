@@ -29,11 +29,17 @@ public class BaseActivity extends Activity {
     Log.d("ZombieRun.GameMapActivity", "onConfigurationChanged handled.");
   }
   
-  protected synchronized static void logToAnalytics(Context context) {
+  protected static synchronized GoogleAnalyticsTracker getAnalyticsTracker(
+      Context context) {
     if (tracker == null) {
       tracker = GoogleAnalyticsTracker.getInstance();
       tracker.start("UA-214814-13", context);
     }
+    return tracker;
+  }
+  
+  protected static void logToAnalytics(Context context) {
+    GoogleAnalyticsTracker tracker = getAnalyticsTracker(context);
     String pageView = "/action/" + context.getClass().getSimpleName();
     Log.d("ZombieRun.BaseActivity", pageView);
     tracker.trackPageView(pageView);

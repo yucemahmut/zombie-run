@@ -1,8 +1,10 @@
 package net.peterd.zombierun.activity;
 
 import com.google.ads.AdSenseSpec;
+import com.google.ads.AdViewListener;
 import com.google.ads.GoogleAdView;
 import com.google.ads.AdSenseSpec.AdType;
+import com.google.android.apps.analytics.GoogleAnalyticsTracker;
 
 import net.peterd.zombierun.R;
 import net.peterd.zombierun.constants.ApplicationConstants;
@@ -43,6 +45,33 @@ public class Util {
     }
     final GoogleAdView adView = 
         (GoogleAdView) activity.findViewById(R.id.adview);
+    final GoogleAnalyticsTracker tracker =
+        BaseActivity.getAnalyticsTracker(activity);
+    AdViewListener listener = new AdViewListener() {
+          public void onStartFetchAd() {
+            tracker.trackEvent("ads",
+                "start_fetch", 
+                activity.getClass().getSimpleName(), 
+                1);
+            tracker.dispatch();
+          }
+          public void onFinishFetchAd() {
+            tracker.trackEvent("ads",
+                "finish_fetch", 
+                activity.getClass().getSimpleName(), 
+                1);
+            tracker.dispatch();
+          }
+          public void onClickAd() {
+            tracker.trackEvent("ads",
+                "click", 
+                activity.getClass().getSimpleName(), 
+                1);
+            tracker.dispatch();
+          }
+        };
+    adView.setAdViewListener(listener);
+
     new Handler().post(new Runnable() {
         public void run() {
           AdSenseSpec adSenseSpec = 
@@ -55,7 +84,7 @@ public class Util {
                   .setAdType(AdType.TEXT_IMAGE)
                   .setWebEquivalentUrl(activity.getString(R.string.about_url))
                   .setAdTestEnabled(ApplicationConstants.testing());
-    
+
           // Fetch Google ad.
           // PLEASE DO NOT CLICK ON THE AD UNLESS YOU ARE IN TEST MODE.
           // OTHERWISE, YOUR ACCOUNT MAY BE DISABLED.
