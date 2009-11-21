@@ -15,7 +15,16 @@ class HomepageHandler(api.GameHandler):
   def get(self):
     user = users.get_current_user()
     if not user:
-      self.RenderLogin()
+      # If the user isn't logged in, then we render a frame around the
+      # homepage, so that the iPhone won't register that we are opening
+      # different urls and break us out of the webapp context that you get when
+      # you add an icon to your homescreen.  The frame will render the same
+      # homepage url, but with a parameter "wrap=0" indicating that we should
+      # not render the frame template again.
+      if self.request.get("wrap") == "0":
+        self.RenderLogin()
+      else:
+        self.OutputTemplate({}, "logged_out_user_wrapper.html")
     else:
       # Look up the game that this player was recently playing.  If there is
       # none, or the game was done, then create a new game and proceed.
