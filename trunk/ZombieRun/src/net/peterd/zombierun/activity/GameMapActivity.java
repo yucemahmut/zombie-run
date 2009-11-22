@@ -9,6 +9,7 @@ import net.peterd.zombierun.constants.Constants;
 import net.peterd.zombierun.constants.Constants.GAME_MENU_OPTION;
 import net.peterd.zombierun.game.GameEvent;
 import net.peterd.zombierun.game.GameSettings;
+import net.peterd.zombierun.overlay.MotoCliqSafeMyLocationOverlay;
 import net.peterd.zombierun.service.GameEventBroadcaster;
 import net.peterd.zombierun.service.GameService;
 import net.peterd.zombierun.util.FloatingPointGeoPoint;
@@ -22,7 +23,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 
 import com.google.android.maps.MapView;
-import com.google.android.maps.MyLocationOverlay;
 
 /**
  * TODO: make the 'back' button go to the home screen (with a quit confirmation dialog), instead of
@@ -36,33 +36,32 @@ public class GameMapActivity extends BaseMapActivity {
   protected final Collection<GAME_MENU_OPTION> menuOptions = new ArrayList<GAME_MENU_OPTION>();
 
   protected MapView mapView;
-  protected MyLocationOverlay myLocationOverlay;
+  protected MotoCliqSafeMyLocationOverlay myLocationOverlay;
   protected GameSettings gameSettings;
-  
+
   /**
    * Initialize the Map that activity takes place on.
    */
   @Override
   public void onCreate(Bundle state) {
     super.onCreate(state);
-    
+
     setContentView(R.layout.game);
 
     service = new GameService(this);
-    
+
     mapView = (MapView) findViewById(R.id.mapview);
     MapView map = mapView;
     map.setFocusableInTouchMode(true);
     map.setClickable(true);
     map.setBuiltInZoomControls(true);
-    
+
     map.getOverlays().clear();
-    myLocationOverlay = new MyLocationOverlay(this, map);
-    myLocationOverlay.enableMyLocation();
+    myLocationOverlay = new MotoCliqSafeMyLocationOverlay(this, map);
     map.getOverlays().add(myLocationOverlay);
 
     map.setSatellite(true);
-    
+
     Bundle intentExtras = getIntent().getExtras();
     if (intentExtras != null) {
       GameSettings settings = GameSettings.fromBundle(intentExtras);
@@ -70,7 +69,7 @@ public class GameMapActivity extends BaseMapActivity {
         gameSettings = settings;
       }
     }
-    
+
     if (state != null) {
       GameSettings settings = GameSettings.fromBundle(state);
       if (settings != null) {
@@ -84,13 +83,13 @@ public class GameMapActivity extends BaseMapActivity {
       onRestoreInstanceState(state);
     }
   }
-  
+
   @Override
   protected void onRestart() {
     super.onRestart();
     service.getEventHandler().broadcastEvent(GameEvent.GAME_RESUME);
   }
-  
+
   @Override
   public boolean onKeyDown(int keyCode, KeyEvent event) {
     if (keyCode == KeyEvent.KEYCODE_BACK) {
@@ -99,16 +98,15 @@ public class GameMapActivity extends BaseMapActivity {
     }
     return false;
   }
-  
+
   @Override
   protected void onResume() {
     super.onResume();
     service.getEventHandler().broadcastEvent(GameEvent.GAME_RESUME);
     Log.d("ZombieRun.GameMapActivity", "enabling mylocationoverlay");
     myLocationOverlay.enableMyLocation();
-    
   }
-  
+
   @Override
   protected void onPause() {
     super.onPause();
@@ -143,12 +141,12 @@ public class GameMapActivity extends BaseMapActivity {
       gameSettings.toBundle(state);
     }
   }
-  
+
   @Override
   public boolean onPrepareOptionsMenu(Menu menu) {
     super.onCreateOptionsMenu(menu);
     menu.clear();
-    
+
     int menuIndex = 0;
     for (Constants.GAME_MENU_OPTION option : menuOptions) {
       if (option == GAME_MENU_OPTION.MAP_VIEW && !mapView.isSatellite()) {
@@ -164,7 +162,7 @@ public class GameMapActivity extends BaseMapActivity {
     }
     return true;
   }
-  
+
   @Override
   public final boolean onOptionsItemSelected(MenuItem item) {
     super.onOptionsItemSelected(item);
@@ -215,7 +213,7 @@ public class GameMapActivity extends BaseMapActivity {
         .setNegativeButton(getString(R.string.quit_cancel),
             new DialogInterface.OnClickListener() {
               public void onClick(DialogInterface dialog, int which) {
-                // Nothing, just go back to the game. 
+                // Nothing, just go back to the game.
               }
             })
         .show();
