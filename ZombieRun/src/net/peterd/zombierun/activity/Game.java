@@ -16,10 +16,10 @@ import net.peterd.zombierun.overlay.ZombieOverlay;
 import net.peterd.zombierun.service.GameEventListener;
 import net.peterd.zombierun.service.GameService;
 import net.peterd.zombierun.util.FloatingPointGeoPoint;
+import net.peterd.zombierun.util.Log;
 import android.content.Intent;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
-import net.peterd.zombierun.util.Log;
 
 import com.google.android.maps.MapView;
 
@@ -32,7 +32,7 @@ public abstract class Game extends GameMapActivity implements GameEventListener 
   public Game() {
     menuOptions.addAll(Arrays.asList(GAME_MENU_OPTION.values()));
   }
-  
+
   @Override
   public void onCreate(Bundle state) {
     super.onCreate(state);
@@ -43,9 +43,9 @@ public abstract class Game extends GameMapActivity implements GameEventListener 
     } else {
       Log.d("ZombieRun.Game", "onCreate with null bundle.");
     }
-    
+
     initializeDrawables();
-    
+
     // TODO: Initialize a connection to the game service, which should have been created by the
     // entrypoint to this Activity.  A singleplayer-start-game entrypoint, multiplayer-game-master
     // entrypoint, and a multiplayer-join-game entrypoint.
@@ -68,21 +68,23 @@ public abstract class Game extends GameMapActivity implements GameEventListener 
     initializeDestinationOverlay(mapView);
     initializeZombieOverlay(mapView);
   }
-  
+
   protected boolean showAds() {
     return false;
   }
-  
+
+  @Override
   protected void onResume() {
     super.onResume();
     service.getEventHandler().addListener(this);
   }
-  
+
+  @Override
   protected void onPause() {
     super.onPause();
     service.getEventHandler().removeListener(this);
   }
-  
+
   protected abstract void createGame(GameService service, Destination destination);
 
   private void initializeDrawables() {
@@ -90,18 +92,18 @@ public abstract class Game extends GameMapActivity implements GameEventListener 
     zombieMeanderingDrawable.setBounds(0, 0,
         zombieMeanderingDrawable.getIntrinsicWidth(),
         zombieMeanderingDrawable.getIntrinsicHeight());
-    
+
     zombieNoticingPlayerDrawable = getResources().getDrawable(R.drawable.zombie1bodynoticingplayer);
     zombieNoticingPlayerDrawable.setBounds(0, 0,
         zombieNoticingPlayerDrawable.getIntrinsicWidth(),
         zombieNoticingPlayerDrawable.getIntrinsicHeight());
-    
+
     destinationDrawable = getResources().getDrawable(R.drawable.flag);
     destinationDrawable.setBounds(0, 0,
         destinationDrawable.getIntrinsicHeight(),
         destinationDrawable.getIntrinsicHeight());
   }
-  
+
   public void initializeZombieOverlay(MapView map) {
     ZombieOverlay overlay =
         new ZombieOverlay(
@@ -111,18 +113,19 @@ public abstract class Game extends GameMapActivity implements GameEventListener 
             zombieNoticingPlayerDrawable);
     service.getEventHandler().addListener(overlay);
     map.getOverlays().add(overlay);
+    map.postInvalidate();
   }
-  
+
   public void initializePlayersOverlay(MapView map) {
     throw new NotImplementedException();
   }
-    
+
   public void initializeDestinationOverlay(MapView map) {
     AtomicReference<Destination> destinationReference = new AtomicReference<Destination>();
     destinationReference.set(service.getGameState().getDestination());
     map.getOverlays().add(new DestinationOverlay(destinationReference, destinationDrawable));
   }
-  
+
   protected void centerOnPlayer(Player player) {
     FloatingPointGeoPoint playerLocation = player.getLocation();
     if (playerLocation != null) {
@@ -136,23 +139,23 @@ public abstract class Game extends GameMapActivity implements GameEventListener 
       mapView.displayZoomControls(true);
     }
   }
-  
+
   private void onQuitGame() {
     onLoseGame();
   }
-  
+
   private void onLoseGame() {
     Intent intent = new Intent(this, WinOrLoseGame.class);
     intent.putExtra(BundleConstants.GAME_WON, false);
     startActivity(intent);
   }
-  
+
   private void onWinGame() {
     Intent intent = new Intent(this, WinOrLoseGame.class);
     intent.putExtra(BundleConstants.GAME_WON, true);
     startActivity(intent);
   }
-  
+
   private void onZombieNearPlayer(Player player) {
     mapView.getController().animateTo(player.getLocation().getGeoPoint());
     if (mapView.getZoomLevel() < 19) {

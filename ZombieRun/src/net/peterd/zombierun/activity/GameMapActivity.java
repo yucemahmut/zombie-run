@@ -17,6 +17,7 @@ import net.peterd.zombierun.util.Log;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -36,6 +37,7 @@ public class GameMapActivity extends BaseMapActivity {
   protected final Collection<GAME_MENU_OPTION> menuOptions = new ArrayList<GAME_MENU_OPTION>();
 
   protected MapView mapView;
+  protected Drawable myLocationDrawable;
   protected MotoCliqSafeMyLocationOverlay myLocationOverlay;
   protected GameSettings gameSettings;
 
@@ -57,7 +59,14 @@ public class GameMapActivity extends BaseMapActivity {
     map.setBuiltInZoomControls(true);
 
     map.getOverlays().clear();
-    myLocationOverlay = new MotoCliqSafeMyLocationOverlay(this, map);
+    myLocationDrawable = getResources().getDrawable(R.drawable.mylocationdot);
+    myLocationDrawable.setBounds(0,
+        0,
+        myLocationDrawable.getIntrinsicWidth(),
+        myLocationDrawable.getIntrinsicHeight());
+    myLocationOverlay =
+        new MotoCliqSafeMyLocationOverlay(this, map, myLocationDrawable);
+    service.getHardwareManager().registerLocationListener(myLocationOverlay);
     map.getOverlays().add(myLocationOverlay);
 
     map.setSatellite(true);
