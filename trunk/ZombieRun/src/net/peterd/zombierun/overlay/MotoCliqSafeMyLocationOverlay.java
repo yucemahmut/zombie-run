@@ -1,77 +1,104 @@
 package net.peterd.zombierun.overlay;
 
+import java.util.List;
+
+import net.peterd.zombierun.util.GeoPointUtil;
+import net.peterd.zombierun.util.Log;
 import android.content.Context;
 import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.Rect;
-import android.graphics.RectF;
+import android.graphics.drawable.Drawable;
+import android.location.Location;
+import android.location.LocationListener;
 
 import com.google.android.maps.GeoPoint;
+import com.google.android.maps.ItemizedOverlay;
 import com.google.android.maps.MapView;
 import com.google.android.maps.MyLocationOverlay;
 import com.google.android.maps.Overlay;
+import com.google.android.maps.OverlayItem;
 
-public class MotoCliqSafeMyLocationOverlay extends Overlay {
+public class MotoCliqSafeMyLocationOverlay extends MyLocationOverlay implements LocationListener {
 
-  private final MyLocationOverlay delegate;
+  private ItemizedOverlay<OverlayItem> backup_delegate;
+  private boolean drawWithBackupDelegate = false;
   private final MapView map;
-  private static final int dotHeight = 15;
-  private static final int dotWidth = 15;
+  private final Drawable myLocationDot;
 
-	public MotoCliqSafeMyLocationOverlay(Context context, MapView mapView) {
-	  delegate = new MyLocationOverlay(context, mapView);
-	  delegate.enableMyLocation();
+	public MotoCliqSafeMyLocationOverlay(Context context,
+	    MapView mapView,
+	    Drawable myLocationDrawable) {
+	  super(context, mapView);
 		map = mapView;
-	}
-
-	public boolean enableMyLocation() {
-	  return delegate.enableMyLocation();
-	}
-
-	public void disableMyLocation() {
-	  delegate.disableMyLocation();
+		myLocationDot = myLocationDrawable;
+		enableMyLocation();
 	}
 
 	@Override
-	public void draw(Canvas canvas, MapView mapView, boolean shadow) {
+	public void drawMyLocation(Canvas canvas,
+	    MapView mapView,
+	    Location lastFix,
+	    GeoPoint myLocation,
+	    long when) {
 		try {
-			super.draw(canvas, mapView, shadow);
+			super.drawMyLocation(canvas, mapView, lastFix, myLocation, when);
 		} catch (Exception e) {
-      GeoPoint myLocation = delegate.getMyLocation();
-      if (myLocation == null) {
-        return;
-      }
-
-      GeoPoint mapCenter = map.getMapCenter();
-
-			Rect mapRect = new Rect();
-      map.getDrawingRect(mapRect);
-
-      int mapHeight = mapRect.bottom - mapRect.top;
-      int mapWidth = mapRect.right - mapRect.left;
-
-      int lonSpanE6 = map.getLongitudeSpan();
-      int mapLeftLon = mapCenter.getLongitudeE6() - (lonSpanE6 / 2);
-      float screenLocationXPortion = ((float) (myLocation.getLongitudeE6() - mapLeftLon)) / lonSpanE6;
-
-      int latSpanE6 = map.getLatitudeSpan();
-      int mapBottomLat = mapCenter.getLatitudeE6() - (latSpanE6 / 2);
-			float screenLocationYPortion = ((float) (myLocation.getLatitudeE6() - mapBottomLat)) / latSpanE6;
-
-			RectF bounds = new RectF();
-      bounds.bottom = mapRect.bottom - (mapHeight * screenLocationYPortion);
-      bounds.top = bounds.bottom;
-      bounds.bottom -= dotHeight / 2;
-      bounds.top += dotHeight / 2;
-
-      bounds.left = mapRect.left + (mapWidth * screenLocationXPortion);
-      bounds.right = bounds.left;
-      bounds.left -= dotWidth / 2;
-      bounds.right += dotWidth / 2;
-
-      Paint paint = new Paint();
-      paint.setARGB(255, 0, 170, 240);
-      canvas.drawOval(bounds, paint);
+		  Log.d("ZombieRun.MotoCliqSafeMyLocationOverlay", "Caught exception " + e.getMessage());
+		  drawWithBackupDelegate = true;
 		}
+  }
+
+	private void initializeBackupDelegate(GeoPoint location) {
+    if (!drawWithBackupDelegate) {
+      return;
+    }
+
+    Log.d("ZobmieRun.MotoCliqSafeMyLocationOverlay", "Initializing backup delegate.");
+
+	  if (location == null) {
+	    Log.d("ZombieRun.MotoCliqSafeMyLocationOverlay",
+	        "Current location null, cannot draw my location.");
+	  }
+
+	  backup_delegate = new MyLocationItemizedOverlay(location, myLocationDot);
+	  if (drawWithBackupDelegate) {
+	    List<Overlay> overlays = map.getOverlays();
+	    for (int i = 0; i < overlays.size(); ++i) {
+	      if (overlays.get(i) instanceof MyLocationItemizedOverlay) {
+	        overlays.remove(i);
+	        break;
+	      }
+	    }
+	    overlays.add(backup_delegate);
+	    map.postInvalidate();
+	  }
 	}
+
+  @Override
+  public synchronized void onLocationChanged(Location location) {
+    super.onLocationChanged(location);
+
+    Log.d("ZobmieRun.MotoCliqSafeMyLocationOverlay", "Received updated location.");
+    initializeBackupDelegate(GeoPointUtil.fromLocation(location));
+  }
+
+  private class MyLocationItemizedOverlay extends ItemizedOverlay<OverlayItem> {
+
+    private final OverlayItem item;
+
+    public MyLocationItemizedOverlay(GeoPoint location, Drawable marker) {
+      super(boundCenter(marker));
+      item = new OverlayItem(location, "", "");
+      populate();
+    }
+
+    @Override
+    protected OverlayItem createItem(int i) {
+      return item;
+    }
+
+    @Override
+    public int size() {
+      return 1;
+    }
+  }
 }

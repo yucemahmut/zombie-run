@@ -1,7 +1,5 @@
 package net.peterd.zombierun.activity;
 
-import com.google.ads.GoogleAdView;
-
 import net.peterd.zombierun.R;
 import net.peterd.zombierun.constants.BundleConstants;
 import android.content.Intent;
@@ -15,13 +13,13 @@ public class WinOrLoseGame extends BaseActivity {
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    
+
     if (getIntent().getExtras().getBoolean(BundleConstants.GAME_WON)) {
       setContentView(R.layout.win);
     } else {
       setContentView(R.layout.lose);
     }
-    
+
     Button newGameButton = (Button) findViewById(R.id.button_new_game);
     final Intent mainMenuIntent = new Intent(this, Main.class);
     newGameButton.setOnClickListener(new View.OnClickListener() {
@@ -29,10 +27,10 @@ public class WinOrLoseGame extends BaseActivity {
           startActivity(mainMenuIntent);
         }
       });
-    
+
     Util.configureAds(this);
   }
-  
+
   @Override
   public boolean onKeyDown(int keyCode, KeyEvent event) {
     if (keyCode == KeyEvent.KEYCODE_BACK) {
