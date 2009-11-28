@@ -224,7 +224,7 @@ class GameHandler(webapp.RequestHandler):
   def Output(self, output):
     """Write the game to output."""
     self.response.headers["Content-Type"] = "text/plain; charset=utf-8"
-    logging.debug("Response: %s" % output)
+    logging.info("Response: %s" % output)
     self.response.out.write(output)
     
   def LoginUrl(self):
@@ -281,7 +281,7 @@ class StartHandler(GetHandler):
       except ValueError, e:
         raise MalformedRequestError(e)
       
-      destination = Destination()
+      destination = Destination(game)
       destination.SetLocation(lat, lon)
   
       game.started = True
@@ -359,7 +359,7 @@ class StartHandler(GetHandler):
                                     center_lon, 
                                     distance_from_center)
     
-    zombie = Zombie(speed=speed)
+    zombie = Zombie(game, speed=speed)
     zombie.SetLocation(lat, lon)
     game.AddZombie(zombie)
 
@@ -368,10 +368,10 @@ class StartHandler(GetHandler):
     to_lat = lat + math.sin(radians)
     to_lon = lon + math.cos(radians)
     
-    base = Entity()
+    base = Entity(self.GetGame())
     base.SetLocation(lat, lon)
 
-    to = Entity()
+    to = Entity(self.GetGame())
     to.SetLocation(to_lat, to_lon)
 
     base_to_distance = base.DistanceFrom(to)

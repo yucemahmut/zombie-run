@@ -112,8 +112,6 @@ var LocationProvider = Class.create({
   // W3C Location Handling
   //
   initializeW3CLocationUpdates: function() {
-    console.log("Getting location updates from the W3C location API.");
-
     // Get our intial position, and initialize the map at that point.
     navigator.geolocation.getCurrentPosition(
         this.w3CLocationChanged.bind(this),
@@ -130,12 +128,11 @@ var LocationProvider = Class.create({
   // position is the object returned to the method from the navigator.geoLocation.getCurrentPosition
   w3CLocationChanged: function(position) {
     var latLng = latLngFromPosition(position);
-    console.log("w3CLocationChanged: " + latLng);
     this.updateListeners(latLng);
   },
   
   w3CLocationError: function(error) {
-    console.log("locationError: " + error.message);
+    return;
   },
   
 
@@ -160,11 +157,10 @@ var LocationProvider = Class.create({
   
   googleGearsLocationChanged: function(position) {
     var latLng = new google.maps.LatLng(position.latitude, position.longitude);
-    console.log("googleGearsLocationChanged: " + latLng);
     this.updateListeners(latLng);
   },
   
   googleGearsLocationError: function(error) {
-    console.log("locationError: " + error.message);
+    return;
   },
 });

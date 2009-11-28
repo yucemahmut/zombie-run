@@ -2,13 +2,14 @@ import datetime
 import logging
 import math
 import random
+import time
 
 from django.utils import simplejson as json
 from google.appengine.api import users
 from google.appengine.ext import db
 
 RADIUS_OF_EARTH_METERS = 6378100
-TRIGGER_DISTANCE_METERS = 10
+TRIGGER_DISTANCE_METERS = 15
 ZOMBIE_VISION_DISTANCE_METERS = 200
 MAX_TIME_INTERVAL_SECS = 60 * 10  # 10 minutes
 
@@ -101,9 +102,10 @@ class Player(Entity):
   """A player is a player of the game, obviously I hope."""
 
   def __init__(self, game, encoded=None, user=None):
-    Entity.__init__(self, game, encoded)
     self.infected = False
     self.is_zombie = False
+    self.reached_destination = False
+    Entity.__init__(self, game, encoded)
     if user:
       self.email = user.email()
   
@@ -112,7 +114,21 @@ class Player(Entity):
       raise ModelStateError("User must be set before the Player is encoded.")
     dict = Entity.DictForJson(self)
     dict["email"] = self.email
+    dict["infected"] = self.infected
+    if self.infected:
+      dict["infected_time"] = self.infected_time
+    dict["is_zombie"] = self.is_zombie
+    dict["reached_destination"] = self.reached_destination
     return dict
+
+  def FromString(self, encoded):
+    obj = Entity.FromString(self, encoded)
+    self.email = obj["email"]
+    self.infected = obj["infected"]
+    if self.infected:
+      self.infected_time = obj["infected_time"]
+    self.is_zombie = obj["is_zombie"]
+    self.reached_destination = obj["reached_destination"]
   
   def Email(self):
     return self.email
@@ -121,19 +137,19 @@ class Player(Entity):
     """Determines whether or not the player has transitioned from infected to
     zombie."""
     if self.infected and \
-       (datetime.datetime.now() - self.infected_time).seconds > \
+       time.time() - self.infected_time > \
            INFECTED_PLAYER_TRANSITION_SECONDS:
       self.is_zombie = True
       
-  
   def Infect(self):
     """Call to trigger this Player getting infected by a zombie."""
     self.infected = True
-    self.infected_time = datetime.datetime.now()
-  
-  def FromString(self, encoded):
-    obj = Entity.FromString(self, encoded)
-    self.email = obj["email"]
+    self.infected_time = time.time()
+    
+  def ReachedDestination(self):
+    """Call to indicate that this player has reached the game's destination."""
+    logging.info("Player reached destination.")
+    self.reached_destination = True
 
 
 class Trigger(Entity):
@@ -147,9 +163,9 @@ class Trigger(Entity):
   a hook to modify the game state at each elapsed interval.
   """
   
-  def Trigger(self, user):
+  def Trigger(self, player):
     """Process any state changes that should occur in the game when this
-    trigger interacts with the specified User."""
+    trigger interacts with the specified Player."""
     # By default, no action.
     pass   
 
@@ -212,9 +228,8 @@ class Zombie(Trigger):
     else:
       self.chasing = None
 
-  def Trigger(self, user):
-    user.Infect()
-    self.game.PlayerInfected(user)
+  def Trigger(self, player):
+    player.Infect()
   
   def DictForJson(self):
     dict = Entity.DictForJson(self)
@@ -271,9 +286,14 @@ class Game(db.Model):
       yield Player(self, encoded)
   
   def LocatedPlayers(self):
-    for player in self.Players():
+    """Iterate over the Players in the Game which have locations set.
+    
+    Returns:
+        Iterable of (player_index, player) tuples.
+    """
+    for i, player in enumerate(self.Players()):
       if player.Lat() and player.Lon():
-        yield player
+        yield i, player
   
   def AddPlayer(self, player):
     self.players.append(player.ToString())
@@ -287,7 +307,7 @@ class Game(db.Model):
   
   def Zombies(self):
     for encoded in self.zombies:
-      yield Zombie(this, encoded)
+      yield Zombie(self, encoded)
   
   def AddZombie(self, zombie):
     self.zombies.append(zombie.ToString())
@@ -314,11 +334,6 @@ class Game(db.Model):
   def Start(self):
     self.started = True
 
-  def GameOver(self, humans_won):
-    """The game is over, did the humans win?"""
-    self.done = True
-    self.humans_won = humans_won
-  
   def Advance(self):
     timedelta = datetime.datetime.now() - self.last_update_time
     seconds = timedelta.seconds + timedelta.microseconds / float(1e6)
@@ -328,16 +343,18 @@ class Game(db.Model):
       entity.Invalidate(timedelta)
     
     for i, zombie in enumerate(self.Zombies()):
-      zombie.Advance(seconds_to_move, self.LocatedPlayers())
+      zombie.Advance(seconds_to_move,
+                     [player for i, player in self.LocatedPlayers()])
       self.SetZombie(i, zombie)
       
     # Perform triggers
-    for player in self.LocatedPlayers():
+    for i, player in self.LocatedPlayers():
       if player.DistanceFrom(self.Destination()) < TRIGGER_DISTANCE_METERS:
         self.destination.Trigger(player)
       for zombie in self.Zombies():
         if player.DistanceFrom(zombie) < TRIGGER_DISTANCE_METERS:
           zombie.Trigger(player)
+      self.SetPlayer(i, player)
     
     # Is the game over?
     if self.done:
