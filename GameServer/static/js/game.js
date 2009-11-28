@@ -94,6 +94,7 @@ var Game = Class.create({
       latLng = new google.maps.LatLng(zombie.lat, zombie.lon);
       isNoticingPlayer = zombie.chasing != null;
       if (i < this.zombies.length) {
+    	console.log(zobmies[i]);
         this.zombies[i].locationUpdate(latLng);
         this.zombies[i].setIsNoticingPlayer(isNoticingPlayer);
       } else {
