@@ -230,7 +230,7 @@ class Zombie(Trigger):
         min_player = player
     
     if min_distance < ZOMBIE_VISION_DISTANCE_METERS:
-      self.chasing = player
+      self.chasing = min_player
     else:
       self.chasing = None
 
@@ -354,7 +354,7 @@ class Game(db.Model):
     return self.done and self.humans_won
 
   def Advance(self):
-    if not self.started:
+    if not self.Started() and not self.IsDone():
       return
     
     timedelta = datetime.datetime.now() - self.last_update_time
@@ -363,10 +363,10 @@ class Game(db.Model):
     
     for entity in self.Entities():
       entity.Invalidate(timedelta)
-    
+
+    players_in_play = [player for i, player in self.PlayersInPlay()]
     for i, zombie in enumerate(self.Zombies()):
-      zombie.Advance(seconds_to_move,
-                     [player for i, player in self.PlayersInPlay()])
+      zombie.Advance(seconds_to_move, players_in_play)
       self.SetZombie(i, zombie)
       
     # Perform triggers
