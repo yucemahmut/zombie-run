@@ -278,7 +278,7 @@ class Game(db.Model):
   
   started = db.BooleanProperty(default=False)
   done = db.BooleanProperty(default=False)
-  humans_won = db.BooleanProperty()
+  humans_won = db.BooleanProperty(default=False)
   
   game_creation_time = db.DateTimeProperty(auto_now_add=True)
   last_update_time = db.DateTimeProperty(auto_now=True)
@@ -291,14 +291,18 @@ class Game(db.Model):
     for encoded in self.players:
       yield Player(self, encoded)
   
-  def LocatedPlayers(self):
-    """Iterate over the Players in the Game which have locations set.
+  def PlayersInPlay(self):
+    """Iterate over the Players in the Game which have locations set, have not
+    reacahed the destination, and are not infected.
     
     Returns:
         Iterable of (player_index, player) tuples.
     """
     for i, player in enumerate(self.Players()):
-      if player.Lat() and player.Lon():
+      if (player.Lat() and 
+          player.Lon() and 
+          not player.HasReachedDestination() and
+          not player.IsInfected()):
         yield i, player
   
   def AddPlayer(self, player):
@@ -339,6 +343,15 @@ class Game(db.Model):
   
   def Start(self):
     self.started = True
+    
+  def Started(self):
+    return self.started
+  
+  def IsDone(self):
+    return self.done
+  
+  def HaveHumansWon(self):
+    return self.done and self.humans_won
 
   def Advance(self):
     if not self.started:
@@ -353,15 +366,23 @@ class Game(db.Model):
     
     for i, zombie in enumerate(self.Zombies()):
       zombie.Advance(seconds_to_move,
-                     [player for i, player in self.LocatedPlayers()])
+                     [player for i, player in self.PlayersInPlay()])
       self.SetZombie(i, zombie)
       
     # Perform triggers
-    for i, player in self.LocatedPlayers():
+    for i, player in self.PlayersInPlay():
+      # Trigger destination first, so that when a player has reached the
+      # destination at the same time they were caught by a zombie, we give them
+      # the benefit of the doubt.
       destination = self.Destination()
       if player.DistanceFrom(destination) < TRIGGER_DISTANCE_METERS:
         destination.Trigger(player)
+
       for zombie in self.Zombies():
+        if player.HasReachedDestination():
+          # This player is out of the game, they succeeded.
+          continue
+
         if player.DistanceFrom(zombie) < TRIGGER_DISTANCE_METERS:
           zombie.Trigger(player)
       self.SetPlayer(i, player)

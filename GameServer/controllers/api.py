@@ -179,8 +179,12 @@ class GameHandler(webapp.RequestHandler):
     dictionary = {}
     dictionary["game_id"] = game.Id()
     dictionary["owner"] = game.owner.email()
-    
     dictionary["player"] = users.get_current_user().email()
+    dictionary["started"] = game.Started()
+    if game.Started():
+      dictionary["done"] = game.IsDone()
+    if game.IsDone():
+      dictionary["humans_won"] = game.HaveHumansWon()
     
     swLat = self.request.get(SW_LAT_PARAM)
     swLon = self.request.get(SW_LON_PARAM)
@@ -266,7 +270,7 @@ class StartHandler(GetHandler):
   def get(self):
     def Start():
       game = self.GetGame()
-      if game.started:
+      if game.Started():
         # raise GameStateError("Cannot start a game twice.")
         pass
       if users.get_current_user() != game.owner:
@@ -284,9 +288,9 @@ class StartHandler(GetHandler):
       destination = Destination(game)
       destination.SetLocation(lat, lon)
   
-      game.started = True
       game.SetDestination(destination)
       self.PopulateZombies(game)
+      game.Start()
       self.PutGame(game, True)
       
       return game
