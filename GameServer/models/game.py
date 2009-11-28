@@ -150,6 +150,12 @@ class Player(Entity):
     """Call to indicate that this player has reached the game's destination."""
     logging.info("Player reached destination.")
     self.reached_destination = True
+  
+  def HasReachedDestination(self):
+    return self.reached_destination
+  
+  def IsInfected(self):
+    return self.infected
 
 
 class Trigger(Entity):
@@ -335,6 +341,9 @@ class Game(db.Model):
     self.started = True
 
   def Advance(self):
+    if not self.started:
+      return
+    
     timedelta = datetime.datetime.now() - self.last_update_time
     seconds = timedelta.seconds + timedelta.microseconds / float(1e6)
     seconds_to_move = min(seconds, MAX_TIME_INTERVAL_SECS)
@@ -358,6 +367,20 @@ class Game(db.Model):
       self.SetPlayer(i, player)
     
     # Is the game over?
-    if self.done:
-      pass
-    
+    uninfected_player_who_hasnt_reached_destination = False
+    player_who_is_not_infected = True
+    for player in self.Players():
+      if player.IsInfected():
+        player_who_is_not_infected = False
+      elif not player.HasReachedDestination():
+        uninfected_player_who_hasnt_reached_destination = True
+
+    if not player_who_is_not_infected:
+      # All players have been infected.
+      self.done = True
+      self.humans_won = False
+    elif not uninfected_player_who_hasnt_reached_destination:
+      # There are players how aren't infected, and they have all reached the
+      # destination
+      self.done = True
+      self.humans_won = True
