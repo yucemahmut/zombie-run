@@ -81,7 +81,7 @@ class HomepageHandler(api.GameHandler):
       if player.Email() == user.email():
         return game
     
-    player = Player(user=user)
+    player = Player(game, user=user)
     game.AddPlayer(player)
     return game
   

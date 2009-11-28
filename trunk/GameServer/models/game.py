@@ -21,6 +21,7 @@ MAX_ZOMBIE_CLUSTER_RADIUS = 30
 DEFAULT_ZOMBIE_SPEED = 3 * 0.447  # x miles per hour in meters per second
 DEFAULT_ZOMBIE_DENSITY = 20.0  # zombies per square kilometer
 
+INFECTED_PLAYER_TRANSITION_SECONDS = 120
 
 class Error(Exception):
   """Base error class for all model errors."""
@@ -37,7 +38,8 @@ class Entity():
   
   Entities have a location and a last location update timestamp.
   """
-  def __init__(self, encoded=None):
+  def __init__(self, game, encoded=None):
+    self.game = game
     self.location = (None, None)
     if encoded:
       self.FromString(encoded)
@@ -54,10 +56,15 @@ class Entity():
       self.SetLocation(obj["lat"], obj["lon"])
     return obj
   
-  def TimeElapsed(self):
-    """Get the amount of time that has elapsed since the last location update,
-    in seconds."""
+  def Invalidate(self, timedelta):
+    """Called to invalidate the current state, after some amount of time has
+    passed.
     
+    Args:
+      timedelta: The amount of time that has passed since Invalidate was last
+          called.  A datetime.timedelta object.
+    """
+  
   def Lat(self):
     return self.location[0]
   
@@ -93,8 +100,10 @@ class Entity():
 class Player(Entity):
   """A player is a player of the game, obviously I hope."""
 
-  def __init__(self, encoded=None, user=None):
-    Entity.__init__(self, encoded)
+  def __init__(self, game, encoded=None, user=None):
+    Entity.__init__(self, game, encoded)
+    self.infected = False
+    self.is_zombie = False
     if user:
       self.email = user.email()
   
@@ -107,6 +116,20 @@ class Player(Entity):
   
   def Email(self):
     return self.email
+  
+  def Invalidate(self, timedelta):
+    """Determines whether or not the player has transitioned from infected to
+    zombie."""
+    if self.infected and \
+       (datetime.datetime.now() - self.infected_time).seconds > \
+           INFECTED_PLAYER_TRANSITION_SECONDS:
+      self.is_zombie = True
+      
+  
+  def Infect(self):
+    """Call to trigger this Player getting infected by a zombie."""
+    self.infected = True
+    self.infected_time = datetime.datetime.now()
   
   def FromString(self, encoded):
     obj = Entity.FromString(self, encoded)
@@ -124,7 +147,7 @@ class Trigger(Entity):
   a hook to modify the game state at each elapsed interval.
   """
   
-  def Trigger(self, user, game):
+  def Trigger(self, user):
     """Process any state changes that should occur in the game when this
     trigger interacts with the specified User."""
     # By default, no action.
@@ -133,8 +156,8 @@ class Trigger(Entity):
 
 class Zombie(Trigger):
   
-  def __init__(self, encoded=None, speed=None, chasing=None):
-    Entity.__init__(self, encoded)
+  def __init__(self, game, encoded=None, speed=None, chasing=None):
+    Entity.__init__(self, game, encoded)
     
     if speed:
       self.speed = speed
@@ -189,8 +212,9 @@ class Zombie(Trigger):
     else:
       self.chasing = None
 
-  def Trigger(self, user, game):
-    game.GameOver(False)    
+  def Trigger(self, user):
+    user.Infect()
+    self.game.PlayerInfected(user)
   
   def DictForJson(self):
     dict = Entity.DictForJson(self)
@@ -208,8 +232,8 @@ class Zombie(Trigger):
 
 class Destination(Trigger):
   
-  def Trigger(self, user, game):
-    game.GameOver(True)
+  def Trigger(self, user):
+    self.game.PlayerReachedDestination(user, True)
 
 
 class Game(db.Model):
@@ -244,7 +268,7 @@ class Game(db.Model):
   
   def Players(self):
     for encoded in self.players:
-      yield Player(encoded)
+      yield Player(self, encoded)
   
   def LocatedPlayers(self):
     for player in self.Players():
@@ -263,7 +287,7 @@ class Game(db.Model):
   
   def Zombies(self):
     for encoded in self.zombies:
-      yield Zombie(encoded)
+      yield Zombie(this, encoded)
   
   def AddZombie(self, zombie):
     self.zombies.append(zombie.ToString())
@@ -274,10 +298,18 @@ class Game(db.Model):
     self.zombies[index] = zombie.ToString()
   
   def Destination(self):
-    return Destination(self.destination)
+    return Destination(self, self.destination)
   
   def SetDestination(self, destination):
     self.destination = destination.ToString()
+  
+  def Entities(self):
+    """Iterate over all Entities in the game."""
+    for zombie in self.Zombies():
+      yield zombie
+    for player in self.Players():
+      yield player
+    yield self.Destination()
   
   def Start(self):
     self.started = True
@@ -292,6 +324,9 @@ class Game(db.Model):
     seconds = timedelta.seconds + timedelta.microseconds / float(1e6)
     seconds_to_move = min(seconds, MAX_TIME_INTERVAL_SECS)
     
+    for entity in self.Entities():
+      entity.Invalidate(timedelta)
+    
     for i, zombie in enumerate(self.Zombies()):
       zombie.Advance(seconds_to_move, self.LocatedPlayers())
       self.SetZombie(i, zombie)
@@ -299,10 +334,10 @@ class Game(db.Model):
     # Perform triggers
     for player in self.LocatedPlayers():
       if player.DistanceFrom(self.Destination()) < TRIGGER_DISTANCE_METERS:
-        self.destination.Trigger(player, self)
+        self.destination.Trigger(player)
       for zombie in self.Zombies():
         if player.DistanceFrom(zombie) < TRIGGER_DISTANCE_METERS:
-          zombie.Trigger(player, self)
+          zombie.Trigger(player)
     
     # Is the game over?
     if self.done:
