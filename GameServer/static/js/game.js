@@ -107,6 +107,7 @@ var Game = Class.create({
       this.game_data.players = [];
     }
     while (this.players &&
+    	   this.players.length > 0 &&
            this.players.length > this.game_data.players.length - 1) {
       // game_data.players.length - 1 because we don't want to draw the current
       // user.
