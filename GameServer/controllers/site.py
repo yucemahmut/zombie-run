@@ -21,10 +21,7 @@ class HomepageHandler(api.GameHandler):
       # you add an icon to your homescreen.  The frame will render the same
       # homepage url, but with a parameter "wrap=0" indicating that we should
       # not render the frame template again.
-      if self.request.get("wrap") == "0":
-        self.RenderLogin()
-      else:
-        self.OutputTemplate({}, "logged_out_user_wrapper.html")
+      self.RenderLogin()
     else:
       # Look up the game that this player was recently playing.  If there is
       # none, or the game was done, then create a new game and proceed.
