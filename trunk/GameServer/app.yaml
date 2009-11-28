@@ -14,5 +14,6 @@ handlers:
   static_dir: static/res
 - url: /favicon.ico
   static_files: static/res/favicon.ico
+  upload: static/res/favicon.ico
 - url: /.*
   script: main.py
