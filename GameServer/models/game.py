@@ -247,8 +247,8 @@ class Zombie(Trigger):
 
 class Destination(Trigger):
   
-  def Trigger(self, user):
-    self.game.PlayerReachedDestination(user, True)
+  def Trigger(self, player):
+    player.ReachedDestination()
 
 
 class Game(db.Model):
@@ -349,8 +349,9 @@ class Game(db.Model):
       
     # Perform triggers
     for i, player in self.LocatedPlayers():
-      if player.DistanceFrom(self.Destination()) < TRIGGER_DISTANCE_METERS:
-        self.destination.Trigger(player)
+      destination = self.Destination()
+      if player.DistanceFrom(destination) < TRIGGER_DISTANCE_METERS:
+        destination.Trigger(player)
       for zombie in self.Zombies():
         if player.DistanceFrom(zombie) < TRIGGER_DISTANCE_METERS:
           zombie.Trigger(player)
