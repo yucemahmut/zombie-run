@@ -106,7 +106,8 @@ var Game = Class.create({
     if (!this.game_data.players) {
       this.game_data.players = [];
     }
-    while (this.players.length > this.game_data.players.length - 1) {
+    while (this.players &&
+           this.players.length > this.game_data.players.length - 1) {
       // game_data.players.length - 1 because we don't want to draw the current
       // user.
       this.players.pop().remove();
@@ -147,10 +148,6 @@ var Game = Class.create({
       this.location = location;
     }
 
-    if (moveToCurrentLocation) {
-      this.moveToCurrentLocation();
-    }
-    
     if (!this.locationMarker) {
       this.locationMarker = new MyLocation(this.map, this.location);
     } else {

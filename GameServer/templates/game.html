@@ -161,10 +161,7 @@
 
       var game = new Game(map, {{ game_id }});
       
-      if (game.start()) {
-        console.log("Successfully started game.");
-      } else {
-        console.log("Errors starting the game.");
+      if (!game.start()) {
         switchView("errors");
       }
       
