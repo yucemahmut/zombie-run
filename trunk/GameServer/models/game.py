@@ -178,14 +178,12 @@ class Trigger(Entity):
 
 class Zombie(Trigger):
   
-  def __init__(self, game, encoded=None, speed=None, chasing=None):
-    Entity.__init__(self, game, encoded)
-    
+  def __init__(self, game, encoded=None, speed=None):
     if speed:
       self.speed = speed
-      
-    # Chasing is the player object that the zombie is chasing
-    self.chasing = chasing
+    self.chasing = None
+    self.chasing_email = None
+    Entity.__init__(self, game, encoded)
   
   def Advance(self, seconds, player_iter):
     """Meander some distance.
@@ -229,10 +227,12 @@ class Zombie(Trigger):
         min_distance = distance
         min_player = player
     
-    if min_distance < ZOMBIE_VISION_DISTANCE_METERS:
+    if min_distance and min_distance < ZOMBIE_VISION_DISTANCE_METERS:
       self.chasing = min_player
+      self.chasing_email = min_player.Email()
     else:
       self.chasing = None
+      self.chasing_email = None
 
   def Trigger(self, player):
     player.Infect()
@@ -240,15 +240,15 @@ class Zombie(Trigger):
   def DictForJson(self):
     dict = Entity.DictForJson(self)
     dict["speed"] = self.speed
-    if self.chasing:
-      dict["chasing"] = self.chasing.Email()
+    if self.chasing_email:
+      dict["chasing"] = self.chasing_email
     return dict
   
   def FromString(self, encoded):
     obj = Entity.FromString(self, encoded)
     self.speed = float(obj["speed"])
     if obj.has_key("chasing"):
-      self.chasing = obj["chasing"]
+      self.chasing_email = obj["chasing"]
 
 
 class Destination(Trigger):
