@@ -257,9 +257,28 @@ class GetHandler(GameHandler):
     """
     def GetAndAdvance():
       game = self.GetGame()
+      
+      def PlayersInfected(game):
+        return len(filter(lambda p: p.IsInfected(),
+                          game.Players()))
+      players_infected = PlayersInfected(game)
+
+      def PlayersConverted(game):
+        return len(filter(lambda p: p.IsZombie(),
+                          game.Players()))
+      players_converted = PlayersConverted(game)
+      
       if game.started:
         game.Advance()
-        self.PutGame(game, False)
+        
+        # Conditions of the game that require that we serialize it all the way
+        # to persistent storage.  Currently, if the game has just completed, or
+        # if the number of infected
+        forceput = (game.done or 
+                    PlayersInfected(game) != players_infected or
+                    PlayersConverted(game) != players_converted)
+        
+        self.PutGame(game, forceput)
       return game
     game = db.RunInTransaction(GetAndAdvance)
     self.OutputGame(game)
