@@ -44,6 +44,15 @@ var Game = Class.create({
   gameUpdate: function(transport) {
     var json = eval('(' + transport.responseText + ')');
     if (json) {
+      var messages = [];
+      for (var i = 0; i < Game.all_messages.length; ++i) {
+        message = Game.all_messages[i];
+        if (message.shouldShow(this.game_data, json)) {
+          var str = message.getMessage(this.game_data, json);
+          messages.push(str);
+          console.log("Game message: " + str);
+        }
+      }
       this.game_data = json;
       this.game_id = this.game_data.game_id;
     }
@@ -215,3 +224,79 @@ var Game = Class.create({
     alert("Failed to send an invitation to your friend.  Please try again.");
   },
 });
+
+Object.extend(Game, {
+  all_messages: [],
+});
+
+var AbstractMessage = Class.create({
+  /**
+   * Determine whether or not this Message should be shown for this transition
+   * between game states.
+   * 
+   * Return: true or false.
+   */
+  shouldShow: function(old_gamestate, new_gamestate) {
+    return false;
+  },
+  
+  /**
+   * Get the string that this message should display.  Will only be called if
+   * shouldShow(old_gamestate, new_gamestate) returns True.
+   * 
+   * Return: a string.
+   */
+  getMessage: function(old_gamestate, new_gamestate) {
+	return "";  
+  }
+});
+
+var AbstractGameOverMessage = Class.create(AbstractMessage, {
+  shouldShow: function($super, old_gamestate, new_gamestate) {
+    return old_gamestate.started &&
+           !old_gamestate.done &&
+           new_gamestate.done;
+  }
+});
+
+var AllHumansSurviveMessage = Class.create(AbstractGameOverMessage, {
+  shouldShow: function($super, old_gamestate, new_gamestate) {
+	var super_true = $super(old_gamestate, new_gamestate);
+	if (!super_true) {
+      return false;
+	}
+	for (var i = 0; i < new_gamestate.players.length; i++) {
+      if (new_gamestate.players[i].infected) {
+        // At least one player was infected.
+        return false;
+      }
+	}
+	// No players were infected!
+	return true;
+  },
+  getMessage: function(old_gamestate, new_gamestate) {
+    return "All humans survived!";
+  }
+});
+Game.all_messages.push(new AllHumansSurviveMessage());
+
+var AllHumansInfectedMessage = Class.create(AbstractGameOverMessage, {
+  shouldShow: function($super, old_gamestate, new_gamestate) {
+	var super_true = $super(old_gamestate, new_gamestate);
+	if (!super_true) {
+      return false;
+	}
+	for (var i = 0; i < new_gamestate.players.length; i++) {
+      if (!new_gamestate.players[i].infected) {
+        // At least one player was not infected.
+        return false;
+      }
+	}
+	// All players were infected!
+	return true;
+  },
+  getMessage: function(old_gamestate, new_gamestate) {
+    return "All humans infected!";
+  }
+});
+Game.all_messages.push(new AllHumansInfectedMessage());
