@@ -213,8 +213,9 @@ class GameHandler(webapp.RequestHandler):
         return False
       return True
     
-    dictionary["players"] = [x.DictForJson() for x in game.Players() if
-                             InBounds(x, swLat, swLon, neLat, neLon)]
+    # We always return the locaitons of all the players, as it's important that
+    # the clients see all player state changes.
+    dictionary["players"] = [x.DictForJson() for x in game.Players()]
 
     dictionary["zombies"] = [x.DictForJson() for x in game.Zombies() if
                              InBounds(x, swLat, swLon, neLat, neLon)]
