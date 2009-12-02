@@ -32,7 +32,7 @@ class HomepageHandler(api.GameHandler):
 
       # Show game instructions if the player's played less than a few games.
       show_instructions = query.count(3) < 3
-      if not game:
+      if not game or game.done:
         logging.info("Creating a new game for player %s." % user.email())
         game = self.CreateGame(user)
       else:
