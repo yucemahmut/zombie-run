@@ -255,34 +255,41 @@ class GetHandler(GameHandler):
     
     GAME_ID_PARAMETER must be present in the request and in the datastore.
     """
-    def GetAndAdvance():
-      game = self.GetGame()
-      
-      def PlayersInfected(game):
-        return len(filter(lambda p: p.IsInfected(),
-                          game.Players()))
-      players_infected = PlayersInfected(game)
-
-      def PlayersConverted(game):
-        return len(filter(lambda p: p.IsZombie(),
-                          game.Players()))
-      players_converted = PlayersConverted(game)
-      
-      if game.started:
-        game.Advance()
-        
-        # Conditions of the game that require that we serialize it all the way
-        # to persistent storage.  Currently, if the game has just completed, or
-        # if the number of infected
-        forceput = (game.done or 
-                    PlayersInfected(game) != players_infected or
-                    PlayersConverted(game) != players_converted)
-        
-        self.PutGame(game, forceput)
-      return game
-    game = db.RunInTransaction(GetAndAdvance)
+    game = db.RunInTransaction(self._GetAndAdvance)
     self.OutputGame(game)
+  
+  def _GetAndAdvance(self):
+    game = self.GetGame()
+    if game.started:
+      game = self.AdvanceAndPutGame(game)
+    return game
+  
+  def AdvanceAndPutGame(self, game):
+    players_infected = self._PlayersInfected(game)
+    players_converted = self._PlayersConverted(game)
+    pre_advance_game_done = game.done
+  
+    game.Advance()
     
+    # Conditions of the game that require that we serialize it all the way
+    # to persistent storage.  Currently, if the game has just completed, or
+    # if the number of infected
+    forceput = ((game.done and not pre_advance_game_done) or 
+                self._PlayersInfected(game) != players_infected or
+                self._PlayersConverted(game) != players_converted)
+    
+    self.PutGame(game, forceput)
+    
+    return game
+  
+  def _PlayersInfected(self, game):
+      return len(filter(lambda p: p.IsInfected(),
+                        game.Players()))
+
+  def _PlayersConverted(self, game):
+      return len(filter(lambda p: p.IsZombie(),
+                        game.Players()))
+
 
 class StartHandler(GetHandler):
   """Handles starting a game."""
@@ -435,31 +442,30 @@ class PutHandler(GetHandler):
       except ValueError, e:
         raise MalformedRequestError(e)
       
-      def Put():
-        game = self.GetGame()
-        for i, player in enumerate(game.Players()):
-          if player.Email() == user.email():
-            if player.Lat() != lat or player.Lon() != lon:
-              player.SetLocation(float(self.request.get(LATITUDE_PARAMETER)),
-                                 float(self.request.get(LONGITUDE_PARAMETER)))
-              game.SetPlayer(i, player)
-            break
-  
-        # TODO: compute the zombie density in an area around each player, and if
-        # the zombie density drops below a certain level, add more zombies at
-        # the edge of that area.  This should ensure that players can travel
-        # long distances without running away from the original zombie
-        # population.
-        if game.started:
-          game.Advance()
-          
-        self.PutGame(game, False)
-        return game
-      
-      game = db.RunInTransaction(Put)
+      game = db.RunInTransaction(self._PutAndAdvanceGame, user, lat, lon)
       self.OutputGame(game)
     else:
       self.RedirectToLogin()
+  
+  def _PutAndAdvanceGame(self, user, lat, lon):
+    game = self.GetGame()
+    for i, player in enumerate(game.Players()):
+      if player.Email() == user.email():
+        if player.Lat() != lat or player.Lon() != lon:
+          player.SetLocation(float(self.request.get(LATITUDE_PARAMETER)),
+                             float(self.request.get(LONGITUDE_PARAMETER)))
+          game.SetPlayer(i, player)
+        break
+
+    # TODO: compute the zombie density in an area around each player, and if
+    # the zombie density drops below a certain level, add more zombies at
+    # the edge of that area.  This should ensure that players can travel
+    # long distances without running away from the original zombie
+    # population.
+    game = self.AdvanceAndPutGame(game)
+
+    return game
+    
 
 class AddFriendHandler(GameHandler):
   def get(self):
