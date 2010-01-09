@@ -1,3 +1,7 @@
+/**
+ * The Game handles drawing, updating, and fetching the game state from the
+ * game server.
+ */
 var Game = Class.create({
   initialize: function(map, game_id) {
     this.map = map;
@@ -8,6 +12,8 @@ var Game = Class.create({
     this.updating = false;
     this.game_id = game_id;
     this.is_owner = false;
+    
+    this.failed_requests = 0;
   },
   
   // start the game -- initialize location services.
@@ -44,25 +50,72 @@ var Game = Class.create({
   gameUpdate: function(transport) {
     var json = eval('(' + transport.responseText + ')');
     if (json) {
+      // Compute messages that should be shown.
       var messages = [];
       for (var i = 0; i < Game.all_messages.length; ++i) {
         message = Game.all_messages[i];
         if (message.shouldShow(this.game_data, json)) {
-          var str = message.getMessage(this.game_data, json);
-          messages.push(str);
-          console.log("Game message: " + str);
+          messages.push(message);
         }
       }
+      
+      // If there were any messages to show, then show them.
+      if (messages.length > 0) {
+        this.showMessages(messages, json);
+      }
+      
+      // Update our game state.
       this.game_data = json;
       this.game_id = this.game_data.game_id;
     }
+
+    // Note that we got a successful request through.
+    this.failed_requests = 0;
+    
+    // This is our attempt at synchronization, because I don't understand those
+    // issues in JavaScript.
     this.updating = false;
 
     this.is_owner = this.game_data.owner == this.game_data.player;
+
+    // Draw the fucker.
     this.draw();
   },
   
+  /**
+   * Show an array of Messages.
+   * 
+   * @param messages: an array of AbstractMessage objects.
+   * @param new_gamestate: The new game state, to be compared with
+   *     this.game_data.  Will be used to calculate the message representation.
+   */
+  showMessages: function(messages, new_gamestate) {
+    for (var i = 0; i < messages.length; ++i) {
+      this.showMessage(messages[i], new_gamestate);
+    }
+  },
+  
+  /**
+   * Show a single Message.
+   * 
+   * @param message: a single AbstractMessage object.
+   * @param new_gamestate: The new game state, to be compared with
+   *     this.game_data.  Will be used to calculate the message representation.
+   */
+  showMessage: function(message, new_gamestate) {
+    var str = message.getMessage(this.game_data, new_gamestate);
+    console.log("Game message: " + str);
+    alert(str);
+  },
+  
   failedGameUpdate: function() {
+    console.log("Failed request.");
+    this.failed_requests += 1;
+    
+    if (this.failed_requests > 10) {
+      showMessage(new TooManyFailedRequestsMessage(), null);
+    }
+      
     this.updating = false;
   },
   
@@ -116,7 +169,7 @@ var Game = Class.create({
       this.game_data.players = [];
     }
     while (this.players &&
-    	   this.players.length > 0 &&
+           this.players.length > 0 &&
            this.players.length > this.game_data.players.length - 1) {
       // game_data.players.length - 1 because we don't want to draw the current
       // user.
@@ -179,8 +232,8 @@ var Game = Class.create({
   },
   
   moveToCurrentLocation: function() {
-    this.map.set_center(this.location);
-    this.map.set_zoom(15);
+    this.map.setCenter(this.location);
+    this.map.setZoom(15);
   },
   
   locationSelected: function(mouseEvent) {
@@ -194,7 +247,7 @@ var Game = Class.create({
     if (confirm("Right destination?")) {
       google.maps.event.removeListener(this.destinationPickClickListener);
       
-      // TODO: on request failure, re-issue the RPC.
+      // TODO: on request failure, re-issue this RPC.
       this.request("/rpc/start",
           { 
             "gid": this.game_id,
@@ -229,6 +282,11 @@ Object.extend(Game, {
   all_messages: [],
 });
 
+
+/*
+ * Game Messages
+ */
+
 var AbstractMessage = Class.create({
   /**
    * Determine whether or not this Message should be shown for this transition
@@ -247,10 +305,102 @@ var AbstractMessage = Class.create({
    * Return: a string.
    */
   getMessage: function(old_gamestate, new_gamestate) {
-	return "";  
-  }
+    return "";  
+  },
 });
 
+var TooManyFailedRequestsMessage = Class.create(AbstractMessage, {
+  shouldShow: function(old_gamestate, new_gamestate) {
+    return false;
+  },
+  
+  getMessage: function(old_gamestate, new_gamestate) {
+    return "There's been a problem connecting to central intelligence.  " +
+        "Reinitializing systems.";
+  },
+});
+
+var HumanInfectedMessage = Class.create(AbstractMessage, {
+  shouldShow: function($super, ogs, ngs) {
+    var ogs_num_infected = 0;
+    if (!ogs.players) {
+      return false;
+    }
+    
+    for (var i = 0; i < ogs.players.length; ++i) {
+      if (ogs.players[i].infected) {
+        ogs_num_infected += 1;
+      }
+    }
+    
+    var ngs_num_infected = 0;
+    for (var i = 0; i < ngs.players.length; ++i) {
+      if (ngs.players[i].infected) {
+        ngs_num_infected += 1;
+      }
+    }
+    
+    return ogs_num_infected < ngs_num_infected;
+  },
+  
+  getMessage: function(ogs, ngs) {
+    var newly_infected_players = [];
+    for (var i = 0; i < ogs.players.length; ++i) {
+      if (!ogs.players[i].infected && ngs.players[i].infected) {
+        newly_infected_players.push(ngs.players[i].email);
+      }
+    }
+    if (newly_infected_players.length == 1) {
+      if (newly_infected_players[0] == ngs.player) {
+    	return "You were just infected by a zombie!";
+      } else {
+        return newly_infected_players[0] + " was just infected by a zombie!";
+      }
+    } else {
+      return newly_infected_players.join(", ") +
+          " were just infected by zombies!";
+    }
+  }
+});
+Game.all_messages.push(new HumanInfectedMessage());
+
+var PlayerJoinedGameMessage = Class.create(AbstractMessage, {
+  shouldShow: function($super, ogs, ngs) {
+	return this.getOtherNewPlayerNames(ogs, ngs).length > 0;
+  },
+  
+  getMessage: function(ogs, ngs) {
+	var new_players = this.getOtherNewPlayerNames(ogs, ngs);
+    if (new_players.length == 1) {
+      return new_players[0] + " just joined the game.";
+    } else {
+      return new_players.join(", ") + " have just joined the game.";
+    }
+  },
+  
+  /**
+   * Get the names of the players that have joined the game since the last game
+   * update, excluding the current player.
+   */
+  getOtherNewPlayerNames: function(ogs, ngs) {
+    var new_players = [];
+    var i = 0;
+    if (ogs.players) {
+      i = ogs.players.length;
+    }
+    for (; i < ngs.players.length; ++i) {
+      if (ngs.players[i].email != ngs.player) {
+        new_players.push(ngs.players[i].email);
+      }
+    }
+    return new_players;
+  },
+});
+Game.all_messages.push(new PlayerJoinedGameMessage());
+
+/**
+ * Base Message for all messages that relate to the end of the game.
+ */
 var AbstractGameOverMessage = Class.create(AbstractMessage, {
   shouldShow: function($super, old_gamestate, new_gamestate) {
     return old_gamestate.started &&
@@ -261,18 +411,18 @@ var AbstractGameOverMessage = Class.create(AbstractMessage, {
 
 var AllHumansSurviveMessage = Class.create(AbstractGameOverMessage, {
   shouldShow: function($super, old_gamestate, new_gamestate) {
-	var super_true = $super(old_gamestate, new_gamestate);
-	if (!super_true) {
+    var super_true = $super(old_gamestate, new_gamestate);
+    if (!super_true) {
       return false;
-	}
-	for (var i = 0; i < new_gamestate.players.length; i++) {
+    }
+    for (var i = 0; i < new_gamestate.players.length; i++) {
       if (new_gamestate.players[i].infected) {
         // At least one player was infected.
         return false;
       }
-	}
-	// No players were infected!
-	return true;
+    }
+    // No players were infected!
+    return true;
   },
   getMessage: function(old_gamestate, new_gamestate) {
     return "All humans survived!";
@@ -282,19 +432,20 @@ Game.all_messages.push(new AllHumansSurviveMessage());
 
 var AllHumansInfectedMessage = Class.create(AbstractGameOverMessage, {
   shouldShow: function($super, old_gamestate, new_gamestate) {
-	var super_true = $super(old_gamestate, new_gamestate);
-	if (!super_true) {
+    var super_true = $super(old_gamestate, new_gamestate);
+    if (!super_true) {
       return false;
-	}
-	for (var i = 0; i < new_gamestate.players.length; i++) {
+    }
+    for (var i = 0; i < new_gamestate.players.length; i++) {
       if (!new_gamestate.players[i].infected) {
         // At least one player was not infected.
         return false;
       }
-	}
-	// All players were infected!
-	return true;
+    }
+    // All players were infected!
+    return true;
   },
+  
   getMessage: function(old_gamestate, new_gamestate) {
     return "All humans infected!";
   }

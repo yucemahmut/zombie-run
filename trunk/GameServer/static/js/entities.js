@@ -16,7 +16,7 @@ var Entity = Class.create({
   
   locationUpdate: function(location) {
     this.location = location;
-    this.marker.set_position(this.location);
+    this.marker.setPosition(this.location);
   },
 });
 
