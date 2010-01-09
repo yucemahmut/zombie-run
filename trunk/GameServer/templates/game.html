@@ -19,7 +19,12 @@
 
   <div id="message" style="display: none;">
     <div id="message_background" style="display: none;"></div>
-    <div id="message_container" style="display: none;"></div>
+    <div id="message_container" style="display: none;">
+      <div id="message_contents"></div>
+      <div id="message_dismiss">
+        <a href="#" onclick="javascript:hideMessage();">Dismiss</a>
+      </div>
+    </div>
   </div>
 
   <div id="errors" class="hidden">
@@ -57,13 +62,12 @@
   <script type="text/javascript">
     var gameInterface = null;
     
-    function showMessage(message_container_id) {
+    function showMessage(message_contents) {
       $("message").style.width = "100%";
       $("message").style.height = "100%";
       $("message_background").style.display = "block";
       $("message_container").style.display = "block";
-      
-      $("message_container").innerHTML = $(message_container_id).innerHTML;
+      $("message_contents").innerHTML = message_contents;
     }
     
     function hideMessage() {

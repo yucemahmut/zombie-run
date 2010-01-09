@@ -105,7 +105,9 @@ var Game = Class.create({
   showMessage: function(message, new_gamestate) {
     var str = message.getMessage(this.game_data, new_gamestate);
     console.log("Game message: " + str);
-    alert(str);
+    
+    // Calling out to the global context methods.
+    showMessage(str);
   },
   
   failedGameUpdate: function() {
@@ -259,6 +261,9 @@ var Game = Class.create({
   
   addFriend: function() {
     var email = prompt("What is your friend's email?");
+    if (email == null) {
+      return;
+    }
     new Ajax.Request("/rpc/addFriend",
       {
         method: 'get',
@@ -270,11 +275,11 @@ var Game = Class.create({
   },
   
   addFriendSuccess: function(transport) {
-    alert("We've invited your friend!  Tell them to check their email soon.");
+	this.showMessage(new SuccessfullyInvitedFriendMessage(), null);
   },
   
   addFriendFailed: function() {
-    alert("Failed to send an invitation to your friend.  Please try again.");
+	this.showMessage(new FailedToInviteFriendMessage(), null);
   },
 });
 
@@ -286,7 +291,6 @@ Object.extend(Game, {
 /*
  * Game Messages
  */
-
 var AbstractMessage = Class.create({
   /**
    * Determine whether or not this Message should be shown for this transition
@@ -310,15 +314,30 @@ var AbstractMessage = Class.create({
 });
 
 var TooManyFailedRequestsMessage = Class.create(AbstractMessage, {
-  shouldShow: function(old_gamestate, new_gamestate) {
-    return false;
-  },
-  
-  getMessage: function(old_gamestate, new_gamestate) {
+  getMessage: function(ogs, ngs) {
     return "There's been a problem connecting to central intelligence.  " +
         "Reinitializing systems.";
   },
 });
+// The above message is not actually dependent on the game state, so we don't
+// register it in the list of the Game's messages.
+
+var SuccessfullyInvitedFriendMessage = Class.create(AbstractMessage, {
+  getMessage: function(ogs, ngs) {
+    return "We have successfully invited your friend.  Tell them to check " +
+    	"their email soon.";
+  },
+});
+//The above message is not actually dependent on the game state, so we don't
+//register it in the list of the Game's messages.
+
+var FailedToInviteFriendMessage = Class.create(AbstractMessage, {
+  getMessage: function(ogs, ngs) {
+    return "There was a problem inviting your friend.  Please try again soon.";
+  },
+});
+//The above message is not actually dependent on the game state, so we don't
+//register it in the list of the Game's messages.
 
 var HumanInfectedMessage = Class.create(AbstractMessage, {
   shouldShow: function($super, ogs, ngs) {
@@ -374,7 +393,7 @@ var PlayerJoinedGameMessage = Class.create(AbstractMessage, {
     if (new_players.length == 1) {
       return new_players[0] + " just joined the game.";
     } else {
-      return new_players.join(", ") + " have just joined the game.";
+      return new_players.join(" and ") + " have just joined the game.";
     }
   },
   
@@ -411,8 +430,7 @@ var AbstractGameOverMessage = Class.create(AbstractMessage, {
 
 var AllHumansSurviveMessage = Class.create(AbstractGameOverMessage, {
   shouldShow: function($super, old_gamestate, new_gamestate) {
-    var super_true = $super(old_gamestate, new_gamestate);
-    if (!super_true) {
+    if (!$super(old_gamestate, new_gamestate)) {
       return false;
     }
     for (var i = 0; i < new_gamestate.players.length; i++) {
@@ -432,8 +450,7 @@ Game.all_messages.push(new AllHumansSurviveMessage());
 
 var AllHumansInfectedMessage = Class.create(AbstractGameOverMessage, {
   shouldShow: function($super, old_gamestate, new_gamestate) {
-    var super_true = $super(old_gamestate, new_gamestate);
-    if (!super_true) {
+    if (!$super(old_gamestate, new_gamestate)) {
       return false;
     }
     for (var i = 0; i < new_gamestate.players.length; i++) {
