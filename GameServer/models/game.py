@@ -96,9 +96,27 @@ class Entity():
     greatCircleDistance = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
     distance = RADIUS_OF_EARTH_METERS * greatCircleDistance
     return distance
+
+
+class Trigger(Entity):
+  """A trigger is an element that can trigger some game action, when reached.
+  
+  For example: a destination is an entity in the game that triggers the 'win
+    game' state.  A Zombie is an entity in the game that triggers the 'lose
+    game' state.
+  
+  Triggers should implement the Process interface method, which gives it
+  a hook to modify the game state at each elapsed interval.
+  """
+  
+  def Trigger(self, player):
+    """Process any state changes that should occur in the game when this
+    trigger interacts with the specified Player."""
+    # By default, no action.
+    pass   
   
 
-class Player(Entity):
+class Player(Trigger):
   """A player is a player of the game, obviously I hope."""
 
   def __init__(self, game, encoded=None, user=None):
@@ -156,24 +174,13 @@ class Player(Entity):
   
   def IsInfected(self):
     return self.infected
-
-
-class Trigger(Entity):
-  """A trigger is an element that can trigger some game action, when reached.
   
-  For example: a destination is an entity in the game that triggers the 'win
-    game' state.  A Zombie is an entity in the game that triggers the 'lose
-    game' state.
-  
-  Triggers should implement the Process interface method, which gives it
-  a hook to modify the game state at each elapsed interval.
-  """
+  def IsZombie(self):
+    return self.is_zombie
   
   def Trigger(self, player):
-    """Process any state changes that should occur in the game when this
-    trigger interacts with the specified Player."""
-    # By default, no action.
-    pass   
+    if self.IsZombie():
+      player.Infect()
 
 
 class Zombie(Trigger):
@@ -291,6 +298,12 @@ class Game(db.Model):
     for encoded in self.players:
       yield Player(self, encoded)
   
+  def ZombiePlayers(self):
+    for encoded in self.players:
+      player = Player(self, encoded)
+      if player.IsZombie():
+        yield player
+  
   def PlayersInPlay(self):
     """Iterate over the Players in the Game which have locations set, have not
     reacahed the destination, and are not infected.
@@ -318,6 +331,12 @@ class Game(db.Model):
   def Zombies(self):
     for encoded in self.zombies:
       yield Zombie(self, encoded)
+  
+  def ZombiesAndInfectedPlayers(self):
+    entities = []
+    entities.extend(self.Zombies())
+    entities.extend(self.ZombiePlayers())
+    return entities
   
   def AddZombie(self, zombie):
     self.zombies.append(zombie.ToString())
@@ -378,11 +397,7 @@ class Game(db.Model):
       if player.DistanceFrom(destination) < TRIGGER_DISTANCE_METERS:
         destination.Trigger(player)
 
-      for zombie in self.Zombies():
-        if player.HasReachedDestination():
-          # This player is out of the game, they succeeded.
-          continue
-
+      for zombie in self.ZombiesAndInfectedPlayers():
         if player.DistanceFrom(zombie) < TRIGGER_DISTANCE_METERS:
           zombie.Trigger(player)
       self.SetPlayer(i, player)
