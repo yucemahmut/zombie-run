@@ -366,7 +366,7 @@ Game.all_messages.push(new HumanInfectedMessage());
 
 var PlayerJoinedGameMessage = Class.create(AbstractMessage, {
   shouldShow: function($super, ogs, ngs) {
-	return this.getOtherNewPlayerNames(ogs, ngs).length > 0;
+	return ogs.started && this.getOtherNewPlayerNames(ogs, ngs).length > 0;
   },
   
   getMessage: function(ogs, ngs) {
