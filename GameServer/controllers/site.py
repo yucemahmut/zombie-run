@@ -25,10 +25,7 @@ class HomepageHandler(api.GameHandler):
     else:
       # Look up the game that this player was recently playing.  If there is
       # none, or the game was done, then create a new game and proceed.
-      query = Game.all()
-      query.filter("player_emails =", user.email())
-      query.order("-last_update_time")
-      game = query.get()
+      game = self.GetLastGame(user)
 
       if game is None or game.done:
         logging.info("Creating a new game for player %s." % user.email())
@@ -38,6 +35,13 @@ class HomepageHandler(api.GameHandler):
         
       self.OutputTemplate({"game_id": game.Id()},
                            "game.html")
+  def GetLastGame(self, user):
+    """Get the last game that this player has played, or None if the player
+    hasn't been involved in any games yet."""
+    query = Game.all()
+    query.filter("player_emails =", user.email())
+    query.order("-game_creation_time")
+    return query.get()
   
   def RenderLogin(self):
     self.OutputTemplate({"login_url": self.LoginUrl()}, "intro.html")
@@ -94,3 +98,14 @@ class JoinHandler(HomepageHandler):
       self.PutGame(game, True)
       logging.info("Put Game.")
       self.RedirectToGame()
+
+
+class NewHandler(HomepageHandler):
+  
+  def get(self):
+    user = users.get_current_user()
+    if not user:
+      self.RenderLogin()
+    else:
+      self.CreateGame(user)
+      self.redirect("/")
