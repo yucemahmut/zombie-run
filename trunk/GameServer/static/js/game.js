@@ -14,6 +14,7 @@ var Game = Class.create({
     this.is_owner = false;
     
     this.failed_requests = 0;
+    this.messages_to_show = [];
   },
   
   // start the game -- initialize location services.
@@ -107,7 +108,7 @@ var Game = Class.create({
     console.log("Game message: " + str);
     
     // Calling out to the global context methods.
-    showMessage(str);
+    window.showMessage(str);
   },
   
   failedGameUpdate: function() {
