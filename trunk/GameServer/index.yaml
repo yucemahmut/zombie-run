@@ -12,12 +12,6 @@ indexes:
 
 - kind: Game
   properties:
-  - name: owner
-  - name: last_update_time
-    direction: desc
-
-- kind: Game
-  properties:
   - name: player_emails
   - name: game_creation_time
     direction: desc
@@ -25,11 +19,5 @@ indexes:
 - kind: Game
   properties:
   - name: player_emails
-  - name: last_update_time
-    direction: desc
-
-- kind: Game
-  properties:
-  - name: players
   - name: last_update_time
     direction: desc
