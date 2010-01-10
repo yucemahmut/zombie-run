@@ -30,17 +30,13 @@ class HomepageHandler(api.GameHandler):
       query.order("-last_update_time")
       game = query.get()
 
-      # Show game instructions if the player's played less than a few games.
-      show_instructions = query.count(3) < 3
-
       if game is None or game.done:
         logging.info("Creating a new game for player %s." % user.email())
         game = self.CreateGame(user)
       else:
         logging.info("Player %s playing game %d" % (user.email(), game.Id()))
         
-      self.OutputTemplate({"game_id": game.Id(),
-                           "show_instructions": show_instructions},
+      self.OutputTemplate({"game_id": game.Id()},
                            "game.html")
   
   def RenderLogin(self):
