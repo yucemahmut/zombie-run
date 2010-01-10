@@ -231,6 +231,7 @@ var Game = Class.create({
           google.maps.event.addListener(this.map,
               "click",
               this.locationSelected.bind(this));
+      this.showMessage(new ChooseDestinationMessage, null);
     }
   },
   
@@ -246,18 +247,16 @@ var Game = Class.create({
     }
     this.destination = new Destination(this.map, latLng);
     
-    // TODO: do a better confirmation dialog.
-    if (confirm("Right destination?")) {
-      google.maps.event.removeListener(this.destinationPickClickListener);
-      
-      // TODO: on request failure, re-issue this RPC.
-      this.request("/rpc/start",
-          { 
-            "gid": this.game_id,
-            "lat": latLng.lat(),
-            "lon": latLng.lng(),
-          });
-    }
+    google.maps.event.removeListener(this.destinationPickClickListener);
+     
+    // TODO: on request failure, re-issue this RPC.
+    this.request("/rpc/start",
+        { 
+          "gid": this.game_id,
+          "lat": latLng.lat(),
+          "lon": latLng.lng(),
+        });
+    this.showMessage(new DestinationChosenMessage(), null);
   },
   
   addFriend: function() {
@@ -313,6 +312,23 @@ var AbstractMessage = Class.create({
     return "";  
   },
 });
+
+var ChooseDestinationMessage = Class.create(AbstractMessage, {
+  getMessage: function(ogs, ngs) {
+    return "Tap on the map to choose your destination.";
+  },
+});
+// The above message is not actually dependent on the game state, so we don't
+// register it in the list of the Game's messages.
+
+var DestinationChosenMessage = Class.create(AbstractMessage, {
+  getMessage: function(ogs, ngs) {
+    return "Now, put your shoes on, get outside, and get to your " +
+        "destination before the zombies eat your brains!";
+  },
+});
+// The above message is not actually dependent on the game state, so we don't
+// register it in the list of the Game's messages.
 
 var TooManyFailedRequestsMessage = Class.create(AbstractMessage, {
   getMessage: function(ogs, ngs) {
@@ -444,7 +460,8 @@ var AllHumansSurviveMessage = Class.create(AbstractGameOverMessage, {
     return true;
   },
   getMessage: function(old_gamestate, new_gamestate) {
-    return "All humans survived!";
+    return "All uninfected humans have reached the destination!  Humanity is " +
+        "safe!";
   }
 });
 Game.all_messages.push(new AllHumansSurviveMessage());
@@ -465,7 +482,7 @@ var AllHumansInfectedMessage = Class.create(AbstractGameOverMessage, {
   },
   
   getMessage: function(old_gamestate, new_gamestate) {
-    return "All humans infected!";
+    return "All humans infected!  Humanity is lost!";
   }
 });
 Game.all_messages.push(new AllHumansInfectedMessage());
