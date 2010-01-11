@@ -46,12 +46,44 @@ function randomLatLngNearLocation(origin, distanceMeters) {
   return latLngTowardTarget(origin, targetLoc, distanceMeters);
 }
 
-var zombiePopulator = Class.create({
-  // map: the map.
-  // start: The location that the game is starting from.
-  // destination: 
-  initialize: function(map, start, destination, averageZombieSpeed, zombieDensity) {
+// The class than handles the display logic of our messages.
+var MessageHandler = Class.create({
+  initialize: function() {
+    this.messages = [];
+    this.showing_message = false;
+  },
   
+  showMessage: function(message) {
+    console.log("Game message: " + message);
+    this.messages.push(message);
+    this.showHeadOfMessageQueue();
+  },
+
+  showHeadOfMessageQueue: function() {
+    if (this.messages.length == 0 || this.showing_message) {
+      return;
+    }
+        
+    this.showing_message = true;
+    $("message").style.width = "100%";
+    $("message").style.height = "100%";
+    $("message_background").style.display = "block";
+    $("message_container").style.display = "block";
+    
+      
+    $("message_contents").innerHTML = this.messages.pop();
+    $("message_dismiss").onclick = function() {
+	      this.hideMessage();
+	      this.showHeadOfMessageQueue();
+	    }.bind(this);
+  },
+  
+  hideMessage: function() {
+    $("message").style.width = 0;
+    $("message").style.height = 0;
+    $("message_background").style.display = "none";
+    $("message_container").style.display = "none";
+    this.showing_message = false;
   },
 });
 

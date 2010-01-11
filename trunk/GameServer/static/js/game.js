@@ -3,8 +3,9 @@
  * game server.
  */
 var Game = Class.create({
-  initialize: function(map, game_id) {
+  initialize: function(map, message_handler, game_id) {
     this.map = map;
+    this.message_handler = message_handler;
     this.location = false;
     this.game_data = new Object;
     this.zombies = new Array;
@@ -19,8 +20,6 @@ var Game = Class.create({
   
   // start the game -- initialize location services.
   start: function() {
-    $("message").style.display = "block";
-  
     this.locationProvider = new LocationProvider();
     if (!this.locationProvider.addListener(this)) {
       return false;
@@ -105,10 +104,7 @@ var Game = Class.create({
    */
   showMessage: function(message, new_gamestate) {
     var str = message.getMessage(this.game_data, new_gamestate);
-    console.log("Game message: " + str);
-    
-    // Calling out to the global context methods.
-    window.showMessage(str);
+    this.message_handler.showMessage(str);
   },
   
   failedGameUpdate: function() {

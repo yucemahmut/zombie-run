@@ -89,46 +89,12 @@
   <script type="text/javascript" src="js/dom_util.js"></script>
   <script type="text/javascript">
     var gameInterface = null;
+    var message_handler = new MessageHandler();
 
-    var messages_to_show = [];
-    var showing_message = false;
-    
-    function showMessage(message) {
-      messages_to_show.push(message);
-      showHeadOfMessageQueue();
-    };
-    
-    function showHeadOfMessageQueue() {
-      if (messages_to_show.length == 0 || showing_message) {
-        return;
-      }
-        
-      showing_message = true;
-      $("message").style.width = "100%";
-      $("message").style.height = "100%";
-      $("message_background").style.display = "block";
-      $("message_container").style.display = "block";
-
-      
-      $("message_contents").innerHTML = messages_to_show.pop();
-      $("message_dismiss").onclick = function() {
-          hideMessage();
-          showHeadOfMessageQueue();
-        }
-    }
-    
-    function hideMessage() {
-      $("message").style.width = 0;
-      $("message").style.height = 0;
-      $("message_background").style.display = "none";
-      $("message_container").style.display = "none";
-      showing_message = false;
-    }
-    
     // Initializes the map and the game, switches the view to the map, starts
     // the game, and returns the game oject.
     function initialize() {
-      switchView("game");
+      $("message").style.display = "block";
 
       var mapOptions = {
         // center: new google.maps.LatLng(0, 0),
@@ -138,12 +104,13 @@
       
       var map = new google.maps.Map(document.getElementById("map"), mapOptions);
 
-      var game = new Game(map, {{ game_id }});
+      var game = new Game(map, message_handler, {{ game_id }});
       
       if (!game.start()) {
         switchView("errors");
       }
       
+      switchView("game");
       return game;
     }
     
