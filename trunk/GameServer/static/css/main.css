@@ -12,12 +12,10 @@ body {
   width: 0;
   height: 0;
 }
-#loading, #game_menu {
+
+#loading {
   text-align: center;
   padding-top: 1em;
-}
-#menu {
-  height: 1.5em;
 }
 
 #game {
@@ -27,6 +25,7 @@ body {
   right: 0;
   bottom: 0;
 }
+
 #map {
   position: absolute;
   top: 50px;
@@ -34,10 +33,13 @@ body {
   right: 0;
   bottom: 2em;
 }
+
 #menu {
   position: absolute;
   height: 2em;
   bottom: 0;
+  width: 100%;
+  text-align: justify;
 }
 
 #message {
