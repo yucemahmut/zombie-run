@@ -36,7 +36,7 @@ var Game = Class.create({
     }
   
     this.updating = true;
-    parameters = { 'gid': this.game_id };
+    var parameters = { 'gid': this.game_id };
     
     if (this.location) {
       parameters["lat"] = this.location.lat();
@@ -103,8 +103,8 @@ var Game = Class.create({
    *     this.game_data.  Will be used to calculate the message representation.
    */
   showMessage: function(message, new_gamestate) {
-    var str = message.getMessage(this.game_data, new_gamestate);
-    this.message_handler.showMessage(str);
+    message.computeMessage(this.game_data, new_gamestate);
+    this.message_handler.showMessage(message);
   },
   
   failedGameUpdate: function() {
@@ -226,8 +226,8 @@ var Game = Class.create({
       this.destinationPickClickListener =
           google.maps.event.addListener(this.map,
               "click",
-              this.locationSelected.bind(this));
-      this.showMessage(new ChooseDestinationMessage, null);
+              this.locationSelectedByClick.bind(this));
+      this.showMessage(new ChooseDestinationMessage(this), null);
     }
   },
   
@@ -236,8 +236,11 @@ var Game = Class.create({
     this.map.setZoom(15);
   },
   
-  locationSelected: function(mouseEvent) {
-    var latLng = mouseEvent.latLng;
+  locationSelectedByClick: function(mouseEvent) {
+    this.locationSelected(mouseEvent.latLng);
+  },
+  
+  locationSelected: function(latLng) {
     if (this.destination) {
       this.destination.remove();
     }
@@ -271,11 +274,11 @@ var Game = Class.create({
   },
   
   addFriendSuccess: function(transport) {
-	this.showMessage(new SuccessfullyInvitedFriendMessage(), null);
+    this.showMessage(new SuccessfullyInvitedFriendMessage(), null);
   },
   
   addFriendFailed: function() {
-	this.showMessage(new FailedToInviteFriendMessage(), null);
+    this.showMessage(new FailedToInviteFriendMessage(), null);
   },
 });
 
@@ -299,26 +302,130 @@ var AbstractMessage = Class.create({
   },
   
   /**
-   * Get the string that this message should display.  Will only be called if
-   * shouldShow(old_gamestate, new_gamestate) returns True.
-   * 
-   * Return: a string.
+   * Compute the string that this message should display.  Will only be called
+   * if shouldShow(old_gamestate, new_gamestate) returns True.
    */
-  getMessage: function(old_gamestate, new_gamestate) {
-    return "";  
+  computeMessage: function(old_gamestate, new_gamestate) { },
+  
+  /**
+   * Populate the provided DOM node with whatever contents the message should
+   * contain.
+   * 
+   * @param dom_node The node in the DOM that the message should be appended
+   *     into.
+   * @param dismiss_callback The callback that should be run to dismiss the
+   *     message.
+   */
+  populateMessage: function(dom_node, dismiss_callback) {
+    // This is up to you, my friend.
   },
 });
 
 var ChooseDestinationMessage = Class.create(AbstractMessage, {
-  getMessage: function(ogs, ngs) {
-    return "Tap on the map to choose your destination.";
+  initialize: function(game) {
+    this.game = game;
+  },
+  
+  populateMessage: function(dom_node, dismiss_callback) {
+    this.dismiss_callback = dismiss_callback;
+    
+    var p = document.createElement("p");
+    dom_node.appendChild(p);
+    p.appendChild(document.createTextNode("What is your destination?"));
+    
+    var form = document.createElement("form");
+    dom_node.appendChild(form);
+    form.setAttribute("action", "#");
+    form.onsubmit = this.processForm.bind(this);
+    
+    var input = document.createElement("input");
+    form.appendChild(input);
+    input.setAttribute("type", "text");
+    input.setAttribute("id", "destination_input");
+    this.destination_input = input;
+    
+    form.appendChild(document.createElement("br"));
+    
+    var submit = document.createElement("input");
+    form.appendChild(submit);
+    submit.setAttribute("type", "submit");
+    submit.setAttribute("value", "Find destination.");
+    
+    // Slightly complicated way of saying:
+    // <p>Or, just <a href="#" onclick=...>tap on the map</a>.</p>
+    var click_p = document.createElement("p");
+    dom_node.appendChild(click_p);
+    click_p.appendChild(document.createTextNode("Or, just "));
+    
+    var click_a = document.createElement("a");
+    click_p.appendChild(click_a);
+    click_a.setAttribute("href", "#");
+    click_a.onclick = this.dismiss_callback;
+    click_a.appendChild(document.createTextNode("tap on the map"));
+    
+    click_p.appendChild(document.createTextNode("."));
+  },
+  
+  processForm: function() {
+    request = {
+                "address": this.destination_input.value,
+                "bounds": this.game.map.getBounds(),
+              };
+    new google.maps.Geocoder().geocode(request,
+            this.doneProcessingForm.bind(this));
+  },
+  
+  doneProcessingForm: function(geocoder_responses, geocoder_status) {
+    if (geocoder_status == google.maps.GeocoderStatus.OK &&
+      geocoder_responses.length > 0) {
+      var latLng = geocoder_responses[0].geometry.location;
+      this.game.locationSelected(latLng);
+      this.dismiss_callback();
+    } else {
+      // TODO: handle this much more gracefully.
+      alert("Oh no!  Failed to geocode.  Reload the page.");
+    }
   },
 });
 // The above message is not actually dependent on the game state, so we don't
 // register it in the list of the Game's messages.
 
-var DestinationChosenMessage = Class.create(AbstractMessage, {
-  getMessage: function(ogs, ngs) {
+/**
+ * An AbstractMessage implementation that asks for a simple string, and
+ * populates the message dom node with a paragraph containing that message (and
+ * a dismiss link).
+ */
+var SimpleParagraphMessage = Class.create(AbstractMessage, {
+  initialize: function() {
+    this.message = "";
+  },
+  
+  /**
+   * Implementations should override this method.
+   */
+  getSimpleMessage: function(old_gamestate, new_gamestate) {
+    return "";
+  },
+  
+  computeMessage: function(ogs, ngs) {
+    this.message = this.getSimpleMessage(ogs, ngs);
+  },
+  
+  populateMessage: function(dom_node, dismiss_callback) {
+    var p = document.createElement("p");
+    p.appendChild(document.createTextNode(this.message));
+    dom_node.appendChild(p);
+      
+    var a = document.createElement("a");
+    a.appendChild(document.createTextNode("dismiss"));
+    a.setAttribute("href", "#");
+    a.onclick = dismiss_callback;
+    dom_node.appendChild(a);
+  },
+});
+
+var DestinationChosenMessage = Class.create(SimpleParagraphMessage, {
+  getSimpleMessage: function(ogs, ngs) {
     return "Now, put your shoes on, get outside, and get to your " +
         "destination before the zombies eat your brains!";
   },
@@ -326,8 +433,8 @@ var DestinationChosenMessage = Class.create(AbstractMessage, {
 // The above message is not actually dependent on the game state, so we don't
 // register it in the list of the Game's messages.
 
-var TooManyFailedRequestsMessage = Class.create(AbstractMessage, {
-  getMessage: function(ogs, ngs) {
+var TooManyFailedRequestsMessage = Class.create(SimpleParagraphMessage, {
+  getSimpleMessage: function(ogs, ngs) {
     return "There's been a problem connecting to central intelligence.  " +
         "Reinitializing systems.";
   },
@@ -335,24 +442,24 @@ var TooManyFailedRequestsMessage = Class.create(AbstractMessage, {
 // The above message is not actually dependent on the game state, so we don't
 // register it in the list of the Game's messages.
 
-var SuccessfullyInvitedFriendMessage = Class.create(AbstractMessage, {
-  getMessage: function(ogs, ngs) {
+var SuccessfullyInvitedFriendMessage = Class.create(SimpleParagraphMessage, {
+  getSimpleMessage: function(ogs, ngs) {
     return "We have successfully invited your friend.  Tell them to check " +
-    	"their email soon.";
+        "their email soon.";
   },
 });
 //The above message is not actually dependent on the game state, so we don't
 //register it in the list of the Game's messages.
 
-var FailedToInviteFriendMessage = Class.create(AbstractMessage, {
-  getMessage: function(ogs, ngs) {
+var FailedToInviteFriendMessage = Class.create(SimpleParagraphMessage, {
+  getSimpleMessage: function(ogs, ngs) {
     return "There was a problem inviting your friend.  Please try again soon.";
   },
 });
 //The above message is not actually dependent on the game state, so we don't
 //register it in the list of the Game's messages.
 
-var HumanInfectedMessage = Class.create(AbstractMessage, {
+var HumanInfectedMessage = Class.create(SimpleParagraphMessage, {
   shouldShow: function($super, ogs, ngs) {
     var ogs_num_infected = 0;
     if (!ogs.players) {
@@ -375,7 +482,7 @@ var HumanInfectedMessage = Class.create(AbstractMessage, {
     return ogs_num_infected < ngs_num_infected;
   },
   
-  getMessage: function(ogs, ngs) {
+  getSimpleMessage: function(ogs, ngs) {
     var newly_infected_players = [];
     for (var i = 0; i < ogs.players.length; ++i) {
       if (!ogs.players[i].infected && ngs.players[i].infected) {
@@ -384,7 +491,7 @@ var HumanInfectedMessage = Class.create(AbstractMessage, {
     }
     if (newly_infected_players.length == 1) {
       if (newly_infected_players[0] == ngs.player) {
-    	return "You were just infected by a zombie!";
+        return "You were just infected by a zombie!";
       } else {
         return newly_infected_players[0] + " was just infected by a zombie!";
       }
@@ -396,13 +503,13 @@ var HumanInfectedMessage = Class.create(AbstractMessage, {
 });
 Game.all_messages.push(new HumanInfectedMessage());
 
-var PlayerJoinedGameMessage = Class.create(AbstractMessage, {
+var PlayerJoinedGameMessage = Class.create(SimpleParagraphMessage, {
   shouldShow: function($super, ogs, ngs) {
-	return ogs.started && this.getOtherNewPlayerNames(ogs, ngs).length > 0;
+    return ogs.started && this.getOtherNewPlayerNames(ogs, ngs).length > 0;
   },
   
-  getMessage: function(ogs, ngs) {
-	var new_players = this.getOtherNewPlayerNames(ogs, ngs);
+  getSimpleMessage: function(ogs, ngs) {
+    var new_players = this.getOtherNewPlayerNames(ogs, ngs);
     if (new_players.length == 1) {
       return new_players[0] + " just joined the game.";
     } else {
@@ -433,7 +540,7 @@ Game.all_messages.push(new PlayerJoinedGameMessage());
 /**
  * Base Message for all messages that relate to the end of the game.
  */
-var AbstractGameOverMessage = Class.create(AbstractMessage, {
+var AbstractGameOverMessage = Class.create(SimpleParagraphMessage, {
   shouldShow: function($super, old_gamestate, new_gamestate) {
     return old_gamestate.started &&
            !old_gamestate.done &&
@@ -455,7 +562,7 @@ var AllHumansSurviveMessage = Class.create(AbstractGameOverMessage, {
     // No players were infected!
     return true;
   },
-  getMessage: function(old_gamestate, new_gamestate) {
+  getSimpleMessage: function(old_gamestate, new_gamestate) {
     return "All uninfected humans have reached the destination!  Humanity is " +
         "safe!";
   }
@@ -477,7 +584,7 @@ var AllHumansInfectedMessage = Class.create(AbstractGameOverMessage, {
     return true;
   },
   
-  getMessage: function(old_gamestate, new_gamestate) {
+  getSimpleMessage: function(old_gamestate, new_gamestate) {
     return "All humans infected!  Humanity is lost!";
   }
 });
