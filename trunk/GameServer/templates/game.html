@@ -48,10 +48,6 @@
   <div id="message" style="display: none;">
     <div id="message_background" style="display: none;"></div>
     <div id="message_container" style="display: none;">
-      <div id="message_contents"></div>
-      <div>
-        <a href="#" id="message_dismiss">Dismiss</a>
-      </div>
     </div>
   </div>
 
@@ -117,7 +113,7 @@
     function switchView(id) {
       var views = [ "game", "errors", "loading" ];
       var foundElement = false;
-      for (i = 0; i < views.length; ++i) {
+      for (var i = 0; i < views.length; ++i) {
         element = $(views[i]);
         if (id == element.id) {
           element.className = "display";

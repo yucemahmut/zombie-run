@@ -54,7 +54,6 @@ var MessageHandler = Class.create({
   },
   
   showMessage: function(message) {
-    console.log("Game message: " + message);
     this.messages.push(message);
     this.showHeadOfMessageQueue();
   },
@@ -70,12 +69,19 @@ var MessageHandler = Class.create({
     $("message_background").style.display = "block";
     $("message_container").style.display = "block";
     
-      
-    $("message_contents").innerHTML = this.messages.pop();
-    $("message_dismiss").onclick = function() {
-	      this.hideMessage();
-	      this.showHeadOfMessageQueue();
-	    }.bind(this);
+    var messages_node = $("message_container");
+    while (messages_node.hasChildNodes()) {
+      messages_node.removeChild(messages_node.firstChild);
+    }
+    
+    message = this.messages.pop();
+
+    var dismiss_callback = function() {
+        this.hideMessage();
+        this.showHeadOfMessageQueue();
+      }.bind(this);
+
+    message.populateMessage(messages_node, dismiss_callback);
   },
   
   hideMessage: function() {
