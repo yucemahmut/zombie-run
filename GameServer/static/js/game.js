@@ -327,6 +327,7 @@ var ChooseDestinationMessage = Class.create(AbstractMessage, {
   },
   
   populateMessage: function(dom_node, dismiss_callback) {
+	this.dom_node = dom_node;
     this.dismiss_callback = dismiss_callback;
     
     var p = document.createElement("p");
@@ -347,11 +348,12 @@ var ChooseDestinationMessage = Class.create(AbstractMessage, {
     form.appendChild(document.createElement("br"));
     
     var submit = document.createElement("input");
+    this.submit_node = submit;
     form.appendChild(submit);
     submit.setAttribute("type", "submit");
     submit.setAttribute("value", "Find destination.");
     
-    // Slightly complicated way of saying:
+    // The following code is just a slightly complicated way of saying:
     // <p>Or, just <a href="#" onclick=...>tap on the map</a>.</p>
     var click_p = document.createElement("p");
     dom_node.appendChild(click_p);
@@ -367,6 +369,7 @@ var ChooseDestinationMessage = Class.create(AbstractMessage, {
   },
   
   processForm: function() {
+	this.submit_node.setAttribute("active", "false");
     request = {
                 "address": this.destination_input.value,
                 "bounds": this.game.map.getBounds(),
@@ -382,8 +385,20 @@ var ChooseDestinationMessage = Class.create(AbstractMessage, {
       this.game.locationSelected(latLng);
       this.dismiss_callback();
     } else {
-      // TODO: handle this much more gracefully.
-      alert("Oh no!  Failed to geocode.  Reload the page.");
+      // Clear out the contents of the dom node.
+      while (this.dom_node.hasChildNodes()) {
+        this.dom_node.removeChild(this.dom_node.firstChild);
+      }
+      
+      // Put an error message at the top.
+      var error = document.createElement("p");
+      this.dom_node.appendChild(error);
+      error.appendChild(
+          document.createTextNode("Oh No!  Something went wrong, try again?"));
+      this.dom_node.appendChild(document.createElement("br"));
+      
+      // Repopulate our original message.
+      this.populateMessage(this.dom_node, this.dismiss_callback);
     }
   },
 });
