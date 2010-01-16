@@ -180,40 +180,8 @@ class GameHandler(webapp.RequestHandler):
     dictionary["game_id"] = game.Id()
     dictionary["owner"] = game.owner.email()
     dictionary["player"] = users.get_current_user().email()
-    dictionary["started"] = game.Started()
-    if game.Started():
-      dictionary["done"] = game.IsDone()
-    if game.IsDone():
-      dictionary["humans_won"] = game.HaveHumansWon()
     
-    swLat = self.request.get(SW_LAT_PARAM)
-    swLon = self.request.get(SW_LON_PARAM)
-    neLat = self.request.get(NE_LAT_PARAM)
-    neLon = self.request.get(NE_LON_PARAM)
-    
-    def InBounds(entity, swLat, swLon, neLat, neLon):
-      if not (swLat and swLon and neLat and neLon):
-        # If these parameters aren't present, then output everything.
-        return True
-      
-      try:
-        swLat = float(swLat)
-        swLon = float(swLon)
-        neLat = float(neLat)
-        neLon = float(neLon)
-      except ValueError, e:
-        # Could not parse bounds parameters
-        return True
-      
-      # Latitude increases from south to north.
-      if entity.Lat() < swLat or entity.Lat() > neLat:
-        return False
-      # Longitude increases from west to east.
-      if entity.Lon() < swLon or entity.Lon() > neLon:
-        return False
-      return True
-    
-    # We always return the locaitons of all the players, as it's important that
+    # We always return the location of all the players, as it's important that
     # the clients see all player state changes.
     dictionary["players"] = [x.DictForJson() for x in game.Players()]
 
