@@ -24,6 +24,14 @@ DEFAULT_ZOMBIE_DENSITY = 20.0  # zombies per square kilometer
 
 INFECTED_PLAYER_TRANSITION_SECONDS = 120
 
+# The size of a GameTile.  A GameTile will span an area that is 0.01 degrees by
+# 0.01 degrees, in both latitude and longitude.  Changing this parameter will
+# invalidate all previously recorded games with undefined consequences.
+#
+# 360 / GAME_TILE_LAT_LON_SPAN and 180 / GAME_TILE_LAT_LON_SPAN must be integer
+# values.
+GAME_TILE_LAT_LON_SPAN = 0.01
+
 class Error(Exception):
   """Base error class for all model errors."""
 
@@ -185,12 +193,18 @@ class Player(Trigger):
 
 class Zombie(Trigger):
   
-  def __init__(self, game, encoded=None, speed=None):
+  def __init__(self, game, encoded=None, speed=None, guid=None):
     if speed:
       self.speed = speed
+    if guid:
+      self.guid = guid
+
     self.chasing = None
     self.chasing_email = None
     Entity.__init__(self, game, encoded)
+  
+  def Id(self):
+    return self.guid
   
   def Advance(self, seconds, player_iter):
     """Meander some distance.
@@ -247,6 +261,7 @@ class Zombie(Trigger):
   def DictForJson(self):
     dict = Entity.DictForJson(self)
     dict["speed"] = self.speed
+    dict["guid"] = self.guid
     if self.chasing_email:
       dict["chasing"] = self.chasing_email
     return dict
@@ -254,6 +269,7 @@ class Zombie(Trigger):
   def FromString(self, encoded):
     obj = Entity.FromString(self, encoded)
     self.speed = float(obj["speed"])
+    self.guid = int(obj["guid"])
     if obj.has_key("chasing"):
       self.chasing_email = obj["chasing"]
 
@@ -264,17 +280,252 @@ class Destination(Trigger):
     player.ReachedDestination()
 
 
-class Game(db.Model):
-  """A Game contains all the information about a ZombieRun game."""
+class LatLngBounds(Object):
   
-  owner = db.UserProperty(auto_current_user_add=True)
+  def __init__(self, neLat, neLon, swLat, swLon):
+    self.neLat = neLat
+    self.neLon = neLon
+    self.swLat = swLat
+    self.swLon = swLon
+    
+  def Contains(self, lat, lon):
+    return lat < self.neLat and \
+        lat > self.swLat and \
+        lon > self.neLon and \
+        lon < self.swLon
+    
+
+def ZombieEquals(a, b):
+  return a.Id() == b.Id()
+
+
+class GameTile(db.Model):
+  """A GameTile represents a small geographical section of a ZombieRun game.
+
+  A GameTile always has a Game as its parent, so one can always retrieve the
+  game that a GameTile belongs to by calling game_tile.parent().
   
+  There is a lot of copy-paste here, the only thing changing generally is the
+  accessor to the id of the Zombie or of the Player.  That should be refactored.
+  """
+
   # The list of player emails, for querying.
   player_emails = db.StringListProperty()
   
   # The actual encoded player data.
   players = db.StringListProperty()
+
   zombies = db.StringListProperty()
+
+  last_update_time = db.DateTimeProperty(auto_now=True)
+  
+  def __init__(self):
+    self.decoded_players = None
+    self.decoded_zombies = None
+  
+  def Players(self):
+    if self.decoded_players is not None:
+      return self.decoded_players
+    
+    self.decoded_players = [Player(self, e) for e in self.players]
+    return self.decoded_players
+  
+  def AddPlayer(self, player):
+    assert not self.HasPlayer(player)
+    self.players.append(player.ToString())
+    self.player_emails.append(player.Email())
+    self._InvalidateDecodedPlayers()
+  
+  def HasPlayer(self, player):
+    # TODO: optimize.
+    for p in self.Players():
+      if p.Email() == player.Email():
+        return True
+    return False
+  
+  def SetPlayer(self, player):
+    # TODO: This can be optimized to use a "GetOrNone" operation.
+    assert self.HasPlayer(player)
+    # TODO: optimize this with a hash map at construction
+    for i, p in enumerate(self.Players()):
+      if p.Email() == player.Email():
+        self.players[index] = player.ToString()
+        self.player_emails[index] = player.Email()
+    self._InvalidateDecodedPlayers()
+    
+  def RemovePlayer(self, player):
+    assert self.HasPlayer(player)
+    player_removed = False
+    for i, p in enumerate(self.Players()):
+      if p.Email() == player.Email():
+        self.players.pop(i)
+        player_removed = True
+        break
+    assert player_removed
+    self._InvalidateDecodedPlayers()
+
+  def _InvalidateDecodedPlayers(self):
+    self.decoded_players = None
+  
+  def Zombies(self):
+    if self.decoded_zombies is not None:
+      return self.decoded_zombies
+    
+    self.decoded_zombies = [Zombie(self, e) for e in self.zombies]
+    return self.decoded_zombies
+  
+  def AddZombie(self, zombie):
+    assert not self.HasZombie(zombie)
+    self.zombies.append(zombie.ToString())
+    self._InvalidateDecodedZombies()
+  
+  def HasZombie(self, zombie):
+    for z in self.Zombies():
+      if z.Id() == zombie.Id():
+        return True
+    return False
+  
+  def RemoveZombie(self, zombie):
+    zombie_removed = False
+    for i, z in enumerate(self.Zombies()):
+      if z.Id() == zombie.Id():
+        self.zombies.pop(i)
+        zombie_removed = True
+    assert zombie_removed
+    self._InvalidateDecodedZombies()
+  
+  def SetZombie(self, zombie):
+    self._SetEntity(zombie, self.zombies, self.Zombies, ZombieEquals)
+    self._InvalidateDecodedZombies()
+  
+  def _InvalidateDecodedZombies(self):
+    self.decoded_zombies = None
+  
+  def _SetEntity(self, entity, entities, Entities, Equals):
+    set = False
+    for i, e in enumerate(Entities()):
+      if Equals(e, entity):
+        entities[i] = e.ToString()
+        set = True
+        break
+    assert set
+
+
+class GameTileWindow(Object):
+  """A GameTileWindow is a utility class for dealing with a set of GameTiles."""
+
+  def __init__(self, game, lat, lon, radius_meters):
+    self.game = game
+    # Retrieve the game tiles that intersect the circle described by the lat,
+    # lon, and radius.
+    #
+    # Create and populate them with zombies if they don't exist.
+    self.tiles = {}
+  
+  def Players(self):
+    for tile in self.tiles:
+      for player in tile.Players():
+        yield player
+
+  def AddPlayer(self, player):
+    # find tile
+    self._TileForEntity(player).AddPlayer(player)
+  
+  def SetPlayer(self, player):
+    self._TileForEntity(player).SetPlayer(player)
+
+  def Zombies(self, zombie):
+    for tile in self.tiles.itervalues():
+      for zombie in tile.Zombies():
+        yield zombie
+  
+  def AddZombie(self, zombie):
+    self._TileForEntity(zombie).AddZombie(zombie)
+  
+  def SetZombie(self, zombie):
+    # First find the zombie in the tile it exists right now, and determine
+    # whether or not the zombie is moving from one tile to another.
+    original_tile = None
+    for tile in self.tiles.itervalues():
+      if tile.HasZombie(zombie):
+        original_tile = tile
+    
+    new_tile = self._TileForEntity(zombie)
+    
+    self._TileForEntity(zombie).SetZombie(zombie)
+    
+  def _TileForEntity(self, entity):
+    # We assume in these calculations that 360 / GAME_TILE_LAT_LON_SPAN and
+    # 180 / GAME_TILE_LAT_LON_SPAN both come out to an integer value.
+    
+    # identify the column of GameTiles at longitude -180 to be column 0.
+    # we have a total of 360 / GAME_TILE_LAT_LON_SPAN columns.
+    # 
+    # So, the column that this entity lies in is:
+    #    portion_into_columns * num_columns =
+    #    ((lon + 180) / 360) * (360 / GAME_TILE_LAT_LON_SPAN) =
+    #    (lon + 180) / GAME_TILE_LAT_LON_SPAN
+    #
+    # Which is then rounded down to an integer id.
+    column = int((entity.Lon() + 180) / GAME_TILE_LAT_LON_SPAN)
+    
+    # Similar logic for the row
+    row = int((entity.Lat() + 90) / GAME_TILE_LAT_LON_SPAN)
+
+    # ID of the game tile is defined as:
+    #
+    # column * NUM_ROWS_PER_COLUMN + row
+    id = (column * 180 / GAME_TILE_LAT_LON_SPAN) + row
+    
+    
+    
+    return None
+  
+  def _GetGameTile(self, tile_id):
+    if self.tiles.has_key(tile_id):
+      return self.tiles[tile_id]
+    
+    if (self._GetGameTileFromMemcache(tile_id) or
+        self._GetGameTileFromDatastore(tile_id)):
+      return self._GetGameTile(tile_id)
+    else:
+      # TODO: create and put a game tile.
+      pass
+    
+  def _GetGameTileFromMemcache(self, tile_id):
+    encoded = memcache.get(self._GetGameTileKeyName(tile_id))
+    
+    if not encoded:
+      logging.warn("Memcache game tile miss.")
+      return False
+    
+    try:
+      tile = pickle.loads(encoded)
+      self.tiles[tile_id] = tile
+      return True
+    except pickle.UnpicklingError, e:
+      logging.error("UnpicklingError on GameTile: %s" % e)
+      return False
+  
+  def _GetGameTileFromDatastore(self, tile_id):
+    logging.info("Getting game tile from datastore.")
+    tile = GameTile.get_by_key_name(self._GetGameTileKeyName(tile_id),
+                                    self.game)
+    if tile:
+      self.tiles[tile_id] = tile
+      return True
+    else:
+      return False
+  
+  def _GetGameTileKeyName(self, tile_id):
+    return "gt%d" % tile_id
+
+
+class Game(db.Model):
+  """A Game contains all the information about a ZombieRun game."""
+  
+  owner = db.UserProperty(auto_current_user_add=True)
+  
   destination = db.StringProperty()
   
   # Meters per Second
@@ -283,30 +534,28 @@ class Game(db.Model):
   # Zombies / km^2
   zombie_density = db.FloatProperty(default=DEFAULT_ZOMBIE_DENSITY)
   
-  started = db.BooleanProperty(default=False)
-  done = db.BooleanProperty(default=False)
-  humans_won = db.BooleanProperty(default=False)
-  
   game_creation_time = db.DateTimeProperty(auto_now_add=True)
   last_update_time = db.DateTimeProperty(auto_now=True)
+  
+  def _GameTileWindow(self):
+    pass
   
   def Id(self):
     # Drop the "g" at the beginning of the game key name.
     return int(self.key().name()[1:])
   
   def Players(self):
-    for encoded in self.players:
-      yield Player(self, encoded)
+    for player in self._GameTileWindow().Players():
+      yield player
   
   def ZombiePlayers(self):
-    for encoded in self.players:
-      player = Player(self, encoded)
+    for player in self.Players():
       if player.IsZombie():
         yield player
   
   def PlayersInPlay(self):
     """Iterate over the Players in the Game which have locations set, have not
-    reacahed the destination, and are not infected.
+    reached the destination, and are not infected.
     
     Returns:
         Iterable of (player_index, player) tuples.
@@ -319,18 +568,14 @@ class Game(db.Model):
         yield i, player
   
   def AddPlayer(self, player):
-    self.players.append(player.ToString())
-    self.player_emails.append(player.Email())
+    self._GameTileWindow().AddPlayer(player)
   
-  def SetPlayer(self, index, player):
-    if index > len(self.players) - 1:
-      raise ModelStateError("Trying to set a player that doesn't exist.")
-    self.players[index] = player.ToString()
-    self.player_emails[index] = player.Email()
+  def SetPlayer(self, player):
+    self._GameTileWindow().SetPlayer(player)
   
   def Zombies(self):
-    for encoded in self.zombies:
-      yield Zombie(self, encoded)
+    for zombie in self._GameTileWindow().Zombies():
+      yield zombie
   
   def ZombiesAndInfectedPlayers(self):
     entities = []
@@ -339,12 +584,10 @@ class Game(db.Model):
     return entities
   
   def AddZombie(self, zombie):
-    self.zombies.append(zombie.ToString())
+    self._GameTileWindow().AddZombie(zombie)
     
-  def SetZombie(self, index, zombie):
-    if index > len(self.zombies) - 1:
-      raise ModelStateError("Trying to set a zombie that doesn't exist.")
-    self.zombies[index] = zombie.ToString()
+  def SetZombie(self, zombie):
+    self._GameTileWindow().SetZombie(zombie)
   
   def Destination(self):
     return Destination(self, self.destination)
@@ -360,22 +603,7 @@ class Game(db.Model):
       yield player
     yield self.Destination()
   
-  def Start(self):
-    self.started = True
-    
-  def Started(self):
-    return self.started
-  
-  def IsDone(self):
-    return self.done
-  
-  def HaveHumansWon(self):
-    return self.done and self.humans_won
-
   def Advance(self):
-    if not self.Started() and not self.IsDone():
-      return
-    
     timedelta = datetime.datetime.now() - self.last_update_time
     seconds = timedelta.seconds + timedelta.microseconds / float(1e6)
     seconds_to_move = min(seconds, MAX_TIME_INTERVAL_SECS)
@@ -384,11 +612,11 @@ class Game(db.Model):
       entity.Invalidate(timedelta)
 
     players_in_play = [player for i, player in self.PlayersInPlay()]
-    for i, zombie in enumerate(self.Zombies()):
+    for zombie in enumerate(self.Zombies()):
       zombie.Advance(seconds_to_move, players_in_play)
-      self.SetZombie(i, zombie)
+      self.SetZombie(zombie)
       
-    # Perform triggers
+    # Perform triggers.
     for i, player in self.PlayersInPlay():
       # Trigger destination first, so that when a player has reached the
       # destination at the same time they were caught by a zombie, we give them
@@ -401,22 +629,3 @@ class Game(db.Model):
         if player.DistanceFrom(zombie) < TRIGGER_DISTANCE_METERS:
           zombie.Trigger(player)
       self.SetPlayer(i, player)
-    
-    # Is the game over?
-    uninfected_player_who_hasnt_reached_destination = False
-    player_who_is_not_infected = True
-    for player in self.Players():
-      if player.IsInfected():
-        player_who_is_not_infected = False
-      elif not player.HasReachedDestination():
-        uninfected_player_who_hasnt_reached_destination = True
-
-    if not player_who_is_not_infected:
-      # All players have been infected.
-      self.done = True
-      self.humans_won = False
-    elif not uninfected_player_who_hasnt_reached_destination:
-      # There are players how aren't infected, and they have all reached the
-      # destination
-      self.done = True
-      self.humans_won = True
