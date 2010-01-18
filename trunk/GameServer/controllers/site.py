@@ -57,6 +57,7 @@ class HomepageHandler(api.GameHandler):
       game_key = self.GetGameKeyName(game_id)
       if Game.get_by_key_name(game_key) is None:
         game = Game(key_name=game_key, owner=user)
+        game.SetWindowLatLon(0, 0)
         self.AddPlayerToGame(game, user)
         self.PutGame(game, True)
         return game
@@ -79,7 +80,8 @@ class HomepageHandler(api.GameHandler):
       if player.Email() == user.email():
         return game
     
-    player = Player(game, user=user)
+    player = Player(user=user)
+    player.SetLocation(0, 0)
     game.AddPlayer(player)
     return game
   

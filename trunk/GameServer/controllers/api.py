@@ -94,23 +94,27 @@ class GameHandler(webapp.RequestHandler):
     if self.game:
       return self.game
     
+    lat = 0
+    lon = 0
     if game_id is None:
       try:
         # Try to get and parse an integer from the URL's hash tag.
         game_id = int(self.request.get(GAME_ID_PARAMETER, None))
+        lat = float(self.request.get(LATITUDE_PARAMETER, lat))
+        lon = float(self.request.get(LONGITUDE_PARAMETER, lon))
       except TypeError, e:
-        raise MalformedRequestError("Game id not present in request or not an "
-                                    "integer value.")
+        raise MalformedRequestError("Game id, lat, or lon not present in "
+                                    "request or not properly valued.")
       except ValueError, e:
-        raise MalformedRequestError("Game id not present in request or not an "
-                                    "integer value.")
+        raise MalformedRequestError("Game id, lat, or lon not present in "
+                                    "request or not properly valued.")
     
     game_key = self.GetGameKeyName(game_id)
     
     if self.LoadFromMemcache(game_key) or self.LoadFromDatastore(game_key):
+      self.game.SetWindowLatLon(lat, lon)
       if authorize:
         self.Authorize(self.game)
-      
       return self.game
     else:
       raise GameNotFoundError()
@@ -148,9 +152,9 @@ class GameHandler(webapp.RequestHandler):
     game.last_update_time = datetime.datetime.now()
     if age.seconds > 30 or force_db_put:
       logging.info("Putting game to datastore.")
-      game.put()
+      game.PutToDatastore()
 
-    # Put to Memcache.
+    # Put to Memcache.  TODO: put tiles to memcache
     encoded = pickle.dumps(game)
     if not memcache.set(game.key().name(), encoded):
       logging.warn("Game set to Memcache failed.")
@@ -185,8 +189,7 @@ class GameHandler(webapp.RequestHandler):
     # the clients see all player state changes.
     dictionary["players"] = [x.DictForJson() for x in game.Players()]
 
-    dictionary["zombies"] = [x.DictForJson() for x in game.Zombies() if
-                             InBounds(x, swLat, swLon, neLat, neLon)]
+    dictionary["zombies"] = [x.DictForJson() for x in game.Zombies()]
     
     if game.destination is not None:
       destination_dict = json.loads(game.destination)
@@ -228,22 +231,18 @@ class GetHandler(GameHandler):
   
   def _GetAndAdvance(self):
     game = self.GetGame()
-    if game.started:
-      game = self.AdvanceAndPutGame(game)
+    game = self.AdvanceAndPutGame(game)
     return game
   
   def AdvanceAndPutGame(self, game):
     players_infected = self._PlayersInfected(game)
     players_converted = self._PlayersConverted(game)
-    pre_advance_game_done = game.done
-  
     game.Advance()
     
     # Conditions of the game that require that we serialize it all the way
     # to persistent storage.  Currently, if the game has just completed, or
     # if the number of infected
-    forceput = ((game.done and not pre_advance_game_done) or 
-                self._PlayersInfected(game) != players_infected or
+    forceput = (self._PlayersInfected(game) != players_infected or
                 self._PlayersConverted(game) != players_converted)
     
     self.PutGame(game, forceput)
@@ -259,15 +258,61 @@ class GetHandler(GameHandler):
                         game.Players()))
 
 
-class StartHandler(GetHandler):
+class PutHandler(GetHandler):
+  """The PutHandler handles registering updates to the game state.
+  
+  All update requests return the current game state, to avoid having to make
+  two requests to update and get the game state.
+  """
+  
+  def get(self):
+    """Task: Parse the input data and update the game state."""
+    user = users.get_current_user()
+    if user:
+      game = db.RunInTransaction(self._PutAndAdvanceGame)
+      self.OutputGame(game)
+    else:
+      self.RedirectToLogin()
+      
+  def UpdateCurrentPlayer(self, game):
+    user = users.get_current_user()
+
+    lat = None
+    lon = None
+    try:
+      lat = float(self.request.get(LATITUDE_PARAMETER))
+      lon = float(self.request.get(LONGITUDE_PARAMETER))
+    except ValueError, e:
+      raise MalformedRequestError(e)
+    
+    for player in game.Players():
+      if player.Email() == user.email():
+        if player.Lat() != lat or player.Lon() != lon:
+          player.SetLocation(float(self.request.get(LATITUDE_PARAMETER)),
+                             float(self.request.get(LONGITUDE_PARAMETER)))
+          game.SetPlayer(player)
+        break
+  
+  def _PutAndAdvanceGame(self):
+    game = self.GetGame()
+    self.UpdateCurrentPlayer(game)
+
+    # TODO: compute the zombie density in an area around each player, and if
+    # the zombie density drops below a certain level, add more zombies at
+    # the edge of that area.  This should ensure that players can travel
+    # long distances without running away from the original zombie
+    # population.
+    game = self.AdvanceAndPutGame(game)
+
+    return game
+  
+
+class StartHandler(PutHandler):
   """Handles starting a game."""
   
   def get(self):
     def Start():
       game = self.GetGame()
-      if game.Started():
-        # raise GameStateError("Cannot start a game twice.")
-        pass
       if users.get_current_user() != game.owner:
         raise AuthorizationError("Only the game owner can start the game.")
       
@@ -280,159 +325,18 @@ class StartHandler(GetHandler):
       except ValueError, e:
         raise MalformedRequestError(e)
       
-      destination = Destination(game)
+      destination = Destination()
       destination.SetLocation(lat, lon)
-  
       game.SetDestination(destination)
-      self.PopulateZombies(game)
-      game.Start()
+
+      self.UpdateCurrentPlayer(game)
+      
       self.PutGame(game, True)
       
       return game
     
     game = db.RunInTransaction(Start)
     self.OutputGame(game)
-    
-  def PopulateZombies(self, game):
-    # Figure out which player is the owner
-    owner = None
-    for player in game.Players():
-      if player.Email() == game.owner.email():
-        owner = player
-    
-    if not owner.Lat() or not owner.Lon():
-      raise GameStateError("Cannot start a game before the game owner's "
-                           "location is known.  Game owner: %s" %
-                           owner.Email())
-    
-    epicenter_lat, epicenter_lon = self.GetZombieEpicenter(game, owner)
-    
-    # not / 2 because we want to cover more than the area just between the
-    # player and the destination
-    radius_m = owner.DistanceFrom(game.Destination())  
-    radius_km = radius_m / 1000
-    area_kmsq = math.pi * radius_km * radius_km
-    logging.info("Computing zombie count for an area of %f square km" %
-                 area_kmsq)
-    
-    # Populate the zombies.
-    num_zombies = int(max(game.zombie_density * area_kmsq, 
-                          game_module.MIN_NUM_ZOMBIES))
-    
-    # TODO: Implement keeping the zombies at least some distance away from each
-    # of the players.
-    while len(game.zombies) < num_zombies:
-      max_zombie_cluster_size = min(game_module.MAX_ZOMBIE_CLUSTER_SIZE,
-                                    num_zombies - len(game.zombies))
-      zombie_cluster_size = random.randint(1, max_zombie_cluster_size)
-      self.AddZombieCluster(game,
-                            epicenter_lat,
-                            epicenter_lon,
-                            radius_m,
-                            zombie_cluster_size)
-      
-  def AddZombieCluster(self,
-                       game,
-                       epicenter_lat, 
-                       epicenter_lon, 
-                       max_radius, 
-                       num_zombies):
-    cluster_distance_from_epicenter = random.random() * max_radius
-    cluster_lat, cluster_lon = \
-        self.RandomPointNear(epicenter_lat,
-                             epicenter_lon,
-                             cluster_distance_from_epicenter)
-    for i in xrange(num_zombies):
-      self.AddZombie(game,
-                     cluster_lat,
-                     cluster_lon)
-  
-  def AddZombie(self, game, center_lat, center_lon):
-    speed = game.average_zombie_speed * \
-        ((random.random() - 0.5) * game_module.ZOMBIE_SPEED_VARIANCE + 1)
-
-    distance_from_center = \
-        random.random() * game_module.MAX_ZOMBIE_CLUSTER_RADIUS
-
-    lat, lon = self.RandomPointNear(center_lat, 
-                                    center_lon, 
-                                    distance_from_center)
-    
-    zombie = Zombie(game, speed=speed)
-    zombie.SetLocation(lat, lon)
-    game.AddZombie(zombie)
-
-  def RandomPointNear(self, lat, lon, distance):
-    radians = math.pi * 2 * random.random()
-    to_lat = lat + math.sin(radians)
-    to_lon = lon + math.cos(radians)
-    
-    base = Entity(self.GetGame())
-    base.SetLocation(lat, lon)
-
-    to = Entity(self.GetGame())
-    to.SetLocation(to_lat, to_lon)
-
-    base_to_distance = base.DistanceFrom(to)
-    magnitude = distance / base_to_distance
-    
-    dLat = (to_lat - lat) * magnitude
-    dLon = (to_lon - lon) * magnitude
-    
-    return (lat + dLat, lon + dLon) 
-  
-  def GetZombieEpicenter(self, game, owner):
-    # Figure out the midpoint of the owner and the destination
-    destination = game.Destination()
-    dLat = destination.Lat() - owner.Lat()
-    dLon = destination.Lon() - owner.Lon()
-    mid_lat = owner.Lat() + dLat / 2
-    mid_lon = owner.Lon() + dLon / 2
-    return (mid_lat, mid_lon)
-
-
-class PutHandler(GetHandler):
-  """The PutHandler handles registering updates to the game state.
-  
-  All update requests return the current game state, to avoid having to make
-  two requests to update and get the game state.
-  """
-  
-  def get(self):
-    """Task: Parse the input data and update the game state."""
-    user = users.get_current_user()
-    if user:
-      lat = None
-      lon = None
-      try:
-        lat = float(self.request.get(LATITUDE_PARAMETER))
-        lon = float(self.request.get(LONGITUDE_PARAMETER))
-      except ValueError, e:
-        raise MalformedRequestError(e)
-      
-      game = db.RunInTransaction(self._PutAndAdvanceGame, user, lat, lon)
-      self.OutputGame(game)
-    else:
-      self.RedirectToLogin()
-  
-  def _PutAndAdvanceGame(self, user, lat, lon):
-    game = self.GetGame()
-    for i, player in enumerate(game.Players()):
-      if player.Email() == user.email():
-        if player.Lat() != lat or player.Lon() != lon:
-          player.SetLocation(float(self.request.get(LATITUDE_PARAMETER)),
-                             float(self.request.get(LONGITUDE_PARAMETER)))
-          game.SetPlayer(i, player)
-        break
-
-    # TODO: compute the zombie density in an area around each player, and if
-    # the zombie density drops below a certain level, add more zombies at
-    # the edge of that area.  This should ensure that players can travel
-    # long distances without running away from the original zombie
-    # population.
-    game = self.AdvanceAndPutGame(game)
-
-    return game
     
 
 class AddFriendHandler(GameHandler):
