@@ -31,9 +31,10 @@ INFECTED_PLAYER_TRANSITION_SECONDS = 120
 # 0.01 degrees, in both latitude and longitude.  Changing this parameter will
 # invalidate all previously recorded games with undefined consequences.
 #
-# 360 / GAME_TILE_LAT_LON_SPAN and 180 / GAME_TILE_LAT_LON_SPAN must be integer
+# 360 / GAME_TILE_LON_SPAN and 180 / GAME_TILE_LAT_SPAN must be integer
 # values.
-GAME_TILE_LAT_LON_SPAN = 0.002
+GAME_TILE_LAT_SPAN = 0.003
+GAME_TILE_LON_SPAN = 0.004
 
 class Error(Exception):
   """Base error class for all model errors."""
@@ -220,8 +221,11 @@ class Zombie(Trigger):
           elapsed since the last time we've advanced the game.
       player_iter: An iterator that will walk over the players in the game.
     """
-    # Advance in 1-second increments
+    # Flatten the iterator to a list so that we can iterate over it several
+    # times.
     players = [player for player in player_iter]
+
+    # Advance in 1-second increments.
     while seconds > 0:
       distance_to_move = seconds * self.speed
       self.ComputeChasing(players)
@@ -231,8 +235,8 @@ class Zombie(Trigger):
                                self.chasing.Lon(),
                                min(distance, distance_to_move))
       else:
-        random_lat = self.Lat() + random.random() - 0.5
-        random_lon = self.Lon() + random.random() - 0.5
+        random_lat = self.Lat() + random.uniform(-0.5, 0.5)
+        random_lon = self.Lon() + random.uniform(-0.5, 0.5)
         self.MoveTowardsLatLon(random_lat, random_lon, distance_to_move)
       seconds = seconds - 1
       
@@ -415,8 +419,8 @@ class GameTile(db.Model):
       self._AddZombieCluster(zombie_cluster_size)
       
   def _AddZombieCluster(self, num_zombies):
-    cluster_lat = self.nw.lat - random.uniform(0, GAME_TILE_LAT_LON_SPAN)
-    cluster_lon = self.nw.lon + random.uniform(0, GAME_TILE_LAT_LON_SPAN)
+    cluster_lat = self.nw.lat - random.uniform(0, GAME_TILE_LAT_SPAN)
+    cluster_lon = self.nw.lon + random.uniform(0, GAME_TILE_LON_SPAN)
     for i in xrange(num_zombies):
       self._AddZombieAt(cluster_lat,
                         cluster_lon)
@@ -473,12 +477,12 @@ class GameTileWindow():
     
     # Expand nLat and sLat to span a distance that is >= radius_meters
     while DistanceBetween(lat, lon, nLat, lon) < radius_meters:
-      nLat += GAME_TILE_LAT_LON_SPAN
-      sLat -= GAME_TILE_LAT_LON_SPAN
+      nLat += GAME_TILE_LAT_SPAN
+      sLat -= GAME_TILE_LAT_SPAN
     # Expand wLon and eLon to span a distance that is >= radius_meters
     while DistanceBetween(lat, lon, lat, wLon) < radius_meters:
-      wLon -= GAME_TILE_LAT_LON_SPAN
-      eLon += GAME_TILE_LAT_LON_SPAN
+      wLon -= GAME_TILE_LON_SPAN
+      eLon += GAME_TILE_LON_SPAN
     
     tileLat = nLat
     tileLon = wLon
@@ -487,12 +491,14 @@ class GameTileWindow():
     while tileLat >= sLat:
       while tileLon <= eLon:
         self._TileForLatLon(tileLat, tileLon)
-        tileLon += GAME_TILE_LAT_LON_SPAN
-      tileLat -= GAME_TILE_LAT_LON_SPAN
+        tileLon += GAME_TILE_LON_SPAN
+      tileLat -= GAME_TILE_LAT_SPAN
     logging.info("Loaded %d GameTiles." % len(self.tiles))
     
   def PutTiles(self, force_datastore_put=True):
     for tile in self.tiles.itervalues():
+      logging.info("Putting tile with nw, se ll: (%s, %s), (%s, %s)" %
+                   (tile.nw.lat, tile.nw.lon, tile.se.lat, tile.se.lon))
       tile.put()
   
   def Players(self):
@@ -541,42 +547,53 @@ class GameTileWindow():
     return self._GetOrCreateGameTile(self._TileIdForLatLon(lat, lon))
 
   def _TileIdForLatLon(self, lat, lon):
-    # We assume in these calculations that 360 / GAME_TILE_LAT_LON_SPAN and
-    # 180 / GAME_TILE_LAT_LON_SPAN both come out to an integer value.
+    # We assume in these calculations that 360 / GAME_TILE_LON_SPAN and
+    # 180 / GAME_TILE_LAT_SPAN both come out to an integer value.
     
     # identify the column of GameTiles at longitude -180 to be column 0.
-    # we have a total of 360 / GAME_TILE_LAT_LON_SPAN columns.
+    # we have a total of 360 / GAME_TILE_LON_SPAN columns.
     # 
     # So, the column that this entity lies in is:
     #    portion_into_columns * num_columns =
-    #    ((lon + 180) / 360) * (360 / GAME_TILE_LAT_LON_SPAN) =
-    #    (lon + 180) / GAME_TILE_LAT_LON_SPAN
+    #    (lon / 360) * (360 / GAME_TILE_LON_SPAN) =
+    #    lon / GAME_TILE_LON_SPAN
     #
     # Which is then rounded down to an integer id.
     #
     # Tiles are identified by their NW corner.
     
-    column = int((lon + 180) / GAME_TILE_LAT_LON_SPAN)
+    column = int(lon / GAME_TILE_LON_SPAN)
     
     # Similar logic for the row
-    row = int((lat + 90) / GAME_TILE_LAT_LON_SPAN)
+    row = int(lat / GAME_TILE_LAT_SPAN)
 
     # ID of the game tile is defined as:
     #
     # column * NUM_ROWS_PER_COLUMN + row
-    return int((column * 180 / GAME_TILE_LAT_LON_SPAN) + row)
+    id = int((column * 180 / GAME_TILE_LAT_SPAN) + row)
+    
+    logging.info("Computed game tile id %d for lat, lon (%f, %f)" %
+                 (id, lat, lon))
+    
+    return id
   
   def _NWLatLonForTileId(self, id):
-    row = id % (180 / GAME_TILE_LAT_LON_SPAN)
-    column = (id - row) / (180 / GAME_TILE_LAT_LON_SPAN)
-    lat = (row * GAME_TILE_LAT_LON_SPAN) - 90
-    lon = (column * GAME_TILE_LAT_LON_SPAN) - 180
+    rows_per_column = 180 / GAME_TILE_LAT_SPAN
+    row = id % rows_per_column
+    column = (id - row) / rows_per_column
+    lat = row * GAME_TILE_LAT_SPAN
+    lon = column * GAME_TILE_LON_SPAN
+    
+    logging.info("NW corner lat, lon for tile id %d is (%f, %f)" %
+                 (id, lat, lon))
     return (lat, lon)
   
   def _SELatLonForTileId(self, id):
     nwLat, nwLon = self._NWLatLonForTileId(id)
-    return (nwLat - GAME_TILE_LAT_LON_SPAN,
-            nwLon + GAME_TILE_LAT_LON_SPAN)
+    seLat, seLon = nwLat - GAME_TILE_LAT_SPAN, nwLon + GAME_TILE_LON_SPAN 
+    logging.info("SE corner lat, lon for tile id %d is (%f, %f)" %
+             (id, seLat, seLon))
+    return (seLat, seLon)
     
   def _GetOrCreateGameTile(self, id):
     if self.tiles.has_key(id):
@@ -662,8 +679,8 @@ class Game(db.Model):
   def PutToDatastore(self):
     """Put this game and the tiles in its window to the datastore.
     """
-    self.put()
     self._GameTileWindow().PutTiles(True)
+    self.put()
 
   def SetWindowLatLon(self, lat, lon):
     """Set the latitude and longitude of the game's operating window's center,
