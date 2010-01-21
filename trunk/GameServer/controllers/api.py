@@ -150,9 +150,9 @@ class GameHandler(webapp.RequestHandler):
     # Put to Datastore once every 30 seconds.
     age = datetime.datetime.now() - game.last_update_time
     game.last_update_time = datetime.datetime.now()
-    if age.seconds > 30 or force_db_put:
-      logging.info("Putting game to datastore.")
-      game.PutToDatastore()
+
+    logging.info("Putting game to datastore.")
+    game.PutToDatastore()
 
     # Put to Memcache.  TODO: put tiles to memcache
     encoded = pickle.dumps(game)
@@ -164,11 +164,7 @@ class GameHandler(webapp.RequestHandler):
     if not user:
       raise AuthorizationError("Request to get a game by a non-logged-in-user.")
     else:
-      authorized = False
-      for player in game.Players():
-        if player.Email() == user.email():
-          authorized = True
-          break
+      authorized = (game.GetPlayer(user.email()) is not None)
       if not authorized:
         raise AuthorizationError(
             "Request to get a game by a user who is not part of the game "
@@ -200,7 +196,7 @@ class GameHandler(webapp.RequestHandler):
   def Output(self, output):
     """Write the game to output."""
     self.response.headers["Content-Type"] = "text/plain; charset=utf-8"
-    logging.info("Response: %s" % output)
+    # logging.info("Response: %s" % output)
     self.response.out.write(output)
     
   def LoginUrl(self):
@@ -226,7 +222,7 @@ class GetHandler(GameHandler):
     
     GAME_ID_PARAMETER must be present in the request and in the datastore.
     """
-    game = db.RunInTransaction(self._GetAndAdvance)
+    game = self._GetAndAdvance()
     self.OutputGame(game)
   
   def _GetAndAdvance(self):
@@ -269,7 +265,7 @@ class PutHandler(GetHandler):
     """Task: Parse the input data and update the game state."""
     user = users.get_current_user()
     if user:
-      game = db.RunInTransaction(self._PutAndAdvanceGame)
+      game = self._PutAndAdvanceGame()
       self.OutputGame(game)
     else:
       self.RedirectToLogin()
@@ -285,13 +281,10 @@ class PutHandler(GetHandler):
     except ValueError, e:
       raise MalformedRequestError(e)
     
-    for player in game.Players():
-      if player.Email() == user.email():
-        if player.Lat() != lat or player.Lon() != lon:
-          player.SetLocation(float(self.request.get(LATITUDE_PARAMETER)),
-                             float(self.request.get(LONGITUDE_PARAMETER)))
-          game.SetPlayer(player)
-        break
+    player = game.GetPlayer(user.email())
+    player.SetLocation(float(self.request.get(LATITUDE_PARAMETER)),
+                       float(self.request.get(LONGITUDE_PARAMETER)))
+    game.SetPlayer(player)
   
   def _PutAndAdvanceGame(self):
     game = self.GetGame()
@@ -311,31 +304,25 @@ class StartHandler(PutHandler):
   """Handles starting a game."""
   
   def get(self):
-    def Start():
-      game = self.GetGame()
-      if users.get_current_user() != game.owner:
-        raise AuthorizationError("Only the game owner can start the game.")
-      
-      # Set the destination
-      lat = None
-      lon = None
-      try:
-        lat = float(self.request.get(LATITUDE_PARAMETER))
-        lon = float(self.request.get(LONGITUDE_PARAMETER))
-      except ValueError, e:
-        raise MalformedRequestError(e)
-      
-      destination = Destination()
-      destination.SetLocation(lat, lon)
-      game.SetDestination(destination)
-
-      self.UpdateCurrentPlayer(game)
-      
-      self.PutGame(game, True)
-      
-      return game
+    game = self.GetGame()
+    if users.get_current_user() != game.owner:
+      raise AuthorizationError("Only the game owner can start the game.")
     
-    game = db.RunInTransaction(Start)
+    # Set the destination
+    lat = None
+    lon = None
+    try:
+      lat = float(self.request.get(LATITUDE_PARAMETER))
+      lon = float(self.request.get(LONGITUDE_PARAMETER))
+    except ValueError, e:
+      raise MalformedRequestError(e)
+    
+    destination = Destination()
+    destination.SetLocation(lat, lon)
+    game.SetDestination(destination)
+
+    self.UpdateCurrentPlayer(game)
+    self.PutGame(game, True)
     self.OutputGame(game)
     
 
