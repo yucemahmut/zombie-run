@@ -70,18 +70,17 @@ class HomepageHandler(api.GameHandler):
       # TODO: Limit this to not blow up the potential size of a game id to an
       # arbitrarily large number.
       game_id = random.randint(0, magnitude)
-      game = db.RunInTransaction(CreateNewGameIfAbsent,
-                                 game_id)
+      game = CreateNewGameIfAbsent(game_id)
       magnitude = magnitude * 10 + 9
     return game
   
   def AddPlayerToGame(self, game, user):
-    for player in game.Players():
-      if player.Email() == user.email():
-        return game
+    logging.debug("Adding player %s to game %d" % (user.email(), game.Id()))
+    if game.GetPlayer(user.email()) is not None:
+      return game
     
     player = Player(user=user)
-    player.SetLocation(0, 0)
+    # player.SetLocation(0, 0)
     game.AddPlayer(player)
     return game
   
