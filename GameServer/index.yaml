@@ -16,34 +16,9 @@ indexes:
   - name: game_creation_time
     direction: desc
 
-- kind: Game
-  properties:
-  - name: player_emails
-  - name: last_update_time
-    direction: desc
-
 - kind: GameTile
   properties:
   - name: game
-  - name: player_emails
-  - name: last_update_time
-    direction: desc
-
-- kind: GameTile
-  properties:
-  - name: player_emails
-  - name: last_update_time
-    direction: desc
-
-- kind: GameTile
-  ancestor: yes
-  properties:
-  - name: last_update_time
-    direction: desc
-
-- kind: GameTile
-  ancestor: yes
-  properties:
   - name: player_emails
   - name: last_update_time
     direction: desc
