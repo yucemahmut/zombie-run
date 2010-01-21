@@ -27,7 +27,7 @@ class HomepageHandler(api.GameHandler):
       # none, or the game was done, then create a new game and proceed.
       game = self.GetLastGame(user)
 
-      if game is None or game.done:
+      if game is None:
         logging.info("Creating a new game for player %s." % user.email())
         game = self.CreateGame(user)
       else:
