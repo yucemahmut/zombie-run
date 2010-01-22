@@ -7,6 +7,7 @@ from google.appengine.api import users
 from google.appengine.ext import db
 from google.appengine.ext.webapp import template
 from models.game import Game
+from models.game import GameTile
 from models.game import Player
 
 
@@ -38,10 +39,13 @@ class HomepageHandler(api.GameHandler):
   def GetLastGame(self, user):
     """Get the last game that this player has played, or None if the player
     hasn't been involved in any games yet."""
-    query = Game.all()
+    query = GameTile.all()
     query.filter("player_emails =", user.email())
-    query.order("-game_creation_time")
-    return query.get()
+    query.order("-last_update_time")
+    tile = query.get()
+    if tile is None:
+      return None
+    return tile.game
   
   def RenderLogin(self):
     self.OutputTemplate({"login_url": self.LoginUrl()}, "intro.html")
@@ -63,7 +67,7 @@ class HomepageHandler(api.GameHandler):
         return game
       return None
 
-    magnitude = 9999
+    magnitude = 2e16
     game_id = None
     game = None
     while game is None:

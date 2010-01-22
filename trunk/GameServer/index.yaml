@@ -22,3 +22,9 @@ indexes:
   - name: player_emails
   - name: last_update_time
     direction: desc
+
+- kind: GameTile
+  properties:
+  - name: player_emails
+  - name: last_update_time
+    direction: desc
