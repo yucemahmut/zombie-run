@@ -58,6 +58,7 @@ class HomepageHandler(api.GameHandler):
         
   def CreateGame(self, user):
     def CreateNewGameIfAbsent(game_id):
+      logging.info("Creating new game with id %d" % game_id)
       game_key = self.GetGameKeyName(game_id)
       if Game.get_by_key_name(game_key) is None:
         game = Game(key_name=game_key, owner=user)
