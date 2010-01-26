@@ -77,7 +77,8 @@ class Entity():
     return {"lat": self.Lat(), "lon": self.Lon()}
   
   def ToString(self):
-    return json.dumps(self.DictForJson())
+    encoded = json.dumps(self.DictForJson())
+    return encoded
   
   def FromString(self, encoded):
     obj = json.loads(encoded)
@@ -542,6 +543,7 @@ class GameTile(db.Model):
     if self.decoded_zombies is not None:
       return self.decoded_zombies
     
+    logging.debug("Decoding Zombies in game tile %d." % self.Id())
     self.decoded_zombies = [Zombie(e) for e in self.zombies]
     return self.decoded_zombies
   
@@ -556,7 +558,7 @@ class GameTile(db.Model):
   def _AddZombie(self, zombie):
     assert not self.HasZombie(zombie)
     self.zombies.append(zombie.ToString())
-    self._InvalidateDecodedZombies()
+    self.decoded_zombies.append(zombie)
   
   def HasZombie(self, zombie):
     for z in self.Zombies():
@@ -568,12 +570,19 @@ class GameTile(db.Model):
     for i, z in enumerate(self.Zombies()):
       if z.Id() == zombie.Id():
         self.zombies.pop(i)
-        break
-    self._InvalidateDecodedZombies()
+        self.decoded_zombies.pop(i)
+        return
+    logging.warn("Could not find zombie %s in game tile %d" %
+                 (zombie.ToString(), self.Id()))
   
   def SetZombie(self, zombie):
-    self.RemoveZombie(zombie)
-    self._AddZombie(zombie)
+    for i, z in enumerate(self.Zombies()):
+      if ZombieEquals(z, zombie):
+        self.zombies[i] = zombie.ToString()
+        self.decoded_zombies[i] = zombie
+        return
+    logging.warn("Could not find zombie %s in game tile %d" %
+                 (zombie.ToString(), self.Id()))
     
   def PopulateZombies(self):
     if self.Id() == UNLOCATED_TILE_ID:
@@ -636,9 +645,6 @@ class GameTile(db.Model):
     
     return (lat + dLat, lon + dLon) 
   
-  def _InvalidateDecodedZombies(self):
-    self.decoded_zombies = None
-
 
 class GameTileWindow():
   """A GameTileWindow is a utility class for dealing with a set of GameTiles."""
@@ -770,6 +776,7 @@ class GameTileWindow():
       logging.debug("Zombie moved from tile %s to tile %s." %
                     (original_tile.Id(), new_tile.Id()))
       original_tile.RemoveZombie(zombie)
+    
     new_tile.SetZombie(zombie)
     
   def _TileForEntity(self, entity):
