@@ -705,9 +705,9 @@ class GameTileWindow():
     
   def PutTiles(self, force_datastore_put=True):
     logging.info("Putting %d game tiles to datastore." % len(self.tiles))
-    for tile in self.tiles.itervalues():
-      logging.info("Putting tile %d to datastore." % tile.Id())
-      tile.put()
+    
+    if force_datastore_put:
+      db.put(self.tiles.values())
   
   def GetPlayer(self, email):
     logging.debug("Getting player %s" % email)
