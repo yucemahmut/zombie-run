@@ -35,14 +35,14 @@ def real_main():
 
 
 def profile_main():
-    prof = cProfile.Profile()
-    prof = prof.runctx("real_main()", globals(), locals())
-    stream = StringIO.StringIO()
-    stats = pstats.Stats(prof, stream=stream)
-    stats.strip_dirs()
-    stats.sort_stats("time")
-    stats.print_stats(20)
-    logging.debug("Profile data:\n%s", stream.getvalue())
+  prof = cProfile.Profile()
+  prof = prof.runctx("real_main()", globals(), locals())
+  stream = StringIO.StringIO()
+  stats = pstats.Stats(prof, stream=stream)
+  stats.strip_dirs()
+  stats.sort_stats("cumulative")
+  stats.print_stats(20)
+  logging.debug("Profile data:\n%s", stream.getvalue())
 
 
 if __name__ == '__main__':
