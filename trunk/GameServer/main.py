@@ -1,4 +1,7 @@
+import cProfile
 import logging
+import pstats 
+import StringIO
 import wsgiref.handlers
 
 from controllers import site
@@ -27,9 +30,20 @@ def GetApplication():
       debug=True)
 
 
-def main():
+def real_main():
   wsgiref.handlers.CGIHandler().run(GetApplication())
 
 
+def profile_main():
+    prof = cProfile.Profile()
+    prof = prof.runctx("real_main()", globals(), locals())
+    stream = StringIO.StringIO()
+    stats = pstats.Stats(prof, stream=stream)
+    stats.strip_dirs()
+    stats.sort_stats("time")
+    stats.print_stats(20)
+    logging.debug("Profile data:\n%s", stream.getvalue())
+
+
 if __name__ == '__main__':
-  main()
+  real_main()
