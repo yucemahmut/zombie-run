@@ -78,7 +78,7 @@ public class HardwareManager implements GameEventListener, LocationListener {
     return vibrator;
   }
 
-  public boolean registerLocationListener(LocationListener listener) {
+  public synchronized boolean registerLocationListener(LocationListener listener) {
     if (locationListeners.size() == 0) {
       locationManager.requestLocationUpdates(bestLocationProvider,
           5 * 1000,
@@ -94,7 +94,7 @@ public class HardwareManager implements GameEventListener, LocationListener {
     }
   }
 
-  public boolean removeLocationListener(LocationListener listener) {
+  public synchronized boolean removeLocationListener(LocationListener listener) {
     return locationListeners.remove(listener) != null;
   }
 
@@ -107,7 +107,7 @@ public class HardwareManager implements GameEventListener, LocationListener {
     }
   }
 
-  public void receiveEvent(GameEvent event) {
+  public synchronized void receiveEvent(GameEvent event) {
     Vibrator vibrator = getVibrator();
     if (event == GameEvent.GAME_LOSE ||
         event == GameEvent.GAME_QUIT ||
@@ -128,7 +128,7 @@ public class HardwareManager implements GameEventListener, LocationListener {
     }
   }
 
-  public void onLocationChanged(Location location) {
+  public synchronized void onLocationChanged(Location location) {
     if (Log.loggingEnabled()) {
       Log.d("ZombieRun.HardwareManager", "Received updated location, distributing to " +
           locationListeners.size() + " listeners.");
