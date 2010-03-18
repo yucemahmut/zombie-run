@@ -576,6 +576,8 @@ class GameTile(db.Model):
                  (zombie.ToString(), self.Id()))
   
   def SetZombie(self, zombie):
+    logging.debug("Setting zombie %s in game tile %d" %
+                  (zombie.ToString(), self.Id()))
     for i, z in enumerate(self.Zombies()):
       if ZombieEquals(z, zombie):
         self.zombies[i] = zombie.ToString()
@@ -583,6 +585,7 @@ class GameTile(db.Model):
         return
     logging.warn("Could not find zombie %s in game tile %d" %
                  (zombie.ToString(), self.Id()))
+    logging.info("Zombies: %s" % [z.ToString() for z in self.Zombies()])
     
   def PopulateZombies(self):
     if self.Id() == UNLOCATED_TILE_ID:
@@ -626,10 +629,12 @@ class GameTile(db.Model):
     lat, lon = self._RandomPointNear(center_lat, 
                                      center_lon, 
                                      distance_from_center)
-    logging.debug("Adding zombie to tile %d at (%f, %f)" % 
-                  (self.Id(), lat, lon))
     zombie = Zombie(speed=speed, guid=str(uuid.uuid4()))
     zombie.SetLocation(lat, lon)
+
+    logging.debug("Adding zombie %s to tile %d." % 
+                  (zombie.ToString(), self.Id()))
+    
     self._AddZombie(zombie)
 
   def _RandomPointNear(self, lat, lon, distance):
@@ -728,7 +733,7 @@ class GameTileWindow():
         if player.Email() == email:
           logging.debug("Found player %s in game tile %d" % (email, tile.Id()))
           return player
-    logging.debug("Did not find player %s in any game tiles." % email)
+    logging.error("Did not find player %s in any game tiles." % email)
     return None
   
   def Players(self):
@@ -776,8 +781,9 @@ class GameTileWindow():
       logging.debug("Zombie moved from tile %s to tile %s." %
                     (original_tile.Id(), new_tile.Id()))
       original_tile.RemoveZombie(zombie)
-    
-    new_tile.SetZombie(zombie)
+      new_tile._AddZombie(zombie)
+    else:
+      new_tile.SetZombie(zombie)
     
   def _TileForEntity(self, entity):
     return self._TileForLatLon(entity.Lat(), entity.Lon())
