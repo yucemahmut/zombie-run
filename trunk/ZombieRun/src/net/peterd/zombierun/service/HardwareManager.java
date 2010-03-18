@@ -1,5 +1,8 @@
 package net.peterd.zombierun.service;
 
+import java.util.Collections;
+import java.util.ConcurrentModificationException;
+import java.util.Map;
 import java.util.WeakHashMap;
 
 import net.peterd.zombierun.R;
@@ -22,8 +25,8 @@ public class HardwareManager implements GameEventListener, LocationListener {
   private final LocationManager locationManager;
   private String bestLocationProvider;
 
-  private final WeakHashMap<LocationListener, Boolean> locationListeners =
-      new WeakHashMap<LocationListener, Boolean>();
+  private final Map<LocationListener, Boolean> locationListeners =
+      Collections.synchronizedMap(new WeakHashMap<LocationListener, Boolean>());
 
   public HardwareManager(Activity activity) {
     // The HardwareManager must not hold onto the Activity it's given.
@@ -78,7 +81,7 @@ public class HardwareManager implements GameEventListener, LocationListener {
     return vibrator;
   }
 
-  public synchronized boolean registerLocationListener(LocationListener listener) {
+  public boolean registerLocationListener(LocationListener listener) {
     if (locationListeners.size() == 0) {
       locationManager.requestLocationUpdates(bestLocationProvider,
           5 * 1000,
@@ -94,7 +97,7 @@ public class HardwareManager implements GameEventListener, LocationListener {
     }
   }
 
-  public synchronized boolean removeLocationListener(LocationListener listener) {
+  public boolean removeLocationListener(LocationListener listener) {
     return locationListeners.remove(listener) != null;
   }
 
@@ -107,7 +110,7 @@ public class HardwareManager implements GameEventListener, LocationListener {
     }
   }
 
-  public synchronized void receiveEvent(GameEvent event) {
+  public void receiveEvent(GameEvent event) {
     Vibrator vibrator = getVibrator();
     if (event == GameEvent.GAME_LOSE ||
         event == GameEvent.GAME_QUIT ||
@@ -128,13 +131,19 @@ public class HardwareManager implements GameEventListener, LocationListener {
     }
   }
 
-  public synchronized void onLocationChanged(Location location) {
+  public void onLocationChanged(Location location) {
     if (Log.loggingEnabled()) {
       Log.d("ZombieRun.HardwareManager", "Received updated location, distributing to " +
           locationListeners.size() + " listeners.");
     }
-    for (LocationListener listener : locationListeners.keySet()) {
-      listener.onLocationChanged(location);
+    try {
+      for (LocationListener listener : locationListeners.keySet()) {
+        listener.onLocationChanged(location);
+      }
+    } catch (ConcurrentModificationException e) {
+      // Just skip distributing the updates if we have a concurrent modification
+      // exception.  There's something else weird going on, but I don't have
+      // time to really investigate it.
     }
   }
   public void onProviderDisabled(String provider) { }
