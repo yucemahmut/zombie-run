@@ -319,12 +319,22 @@ class Game(db.Model):
     self.lon = None
     self.window = None
     
-  def PutToDatastore(self):
+  def Put(self, force_db_put):
     """Put this game and the tiles in its window to the datastore.
     """
-    logging.debug("Putting tiles to datastore.")
-    self._GameTileWindow().PutTiles(not self.is_saved())
-    self.put()
+    self._GameTileWindow().PutTiles(not self.is_saved() or force_db_put)
+    
+    now = datetime.datetime.now()
+    tdelta = now - self.last_update_time
+    if force_db_put or tdelta.seconds > 30:
+      logging.info("Putting game to datastore.")
+      self.put()
+      self.last_update_time = now
+
+    encoded = pickle.dumps(self)
+    if not memcache.set(self.key().name(), encoded):
+      logging.warn("Game set to Memcache failed.")
+
 
   def SetWindowLatLon(self, lat, lon):
     """Set the latitude and longitude of the game's operating window's center,
