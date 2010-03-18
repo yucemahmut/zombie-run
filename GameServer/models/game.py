@@ -1,6 +1,7 @@
 import datetime
 import logging
 import math
+import pickle
 import random
 import time
 import uuid
@@ -322,7 +323,7 @@ class Game(db.Model):
     """Put this game and the tiles in its window to the datastore.
     """
     logging.debug("Putting tiles to datastore.")
-    self._GameTileWindow().PutTiles(True)
+    self._GameTileWindow().PutTiles(not self.is_saved())
     self.put()
 
   def SetWindowLatLon(self, lat, lon):
@@ -709,10 +710,41 @@ class GameTileWindow():
                            entity.Lon()) < PLAYER_VISION_DISTANCE_METERS
     
   def PutTiles(self, force_datastore_put=True):
-    logging.info("Putting %d game tiles to datastore." % len(self.tiles))
+    logging.info("Putting %d game tiles." % len(self.tiles))
+    self._PutTilesToDatastore(force_datastore_put)
+    self._PutTilesToMemcache()
     
+  def _PutTilesToDatastore(self, force_datastore_put):
+    datastore_tiles = []
+
     if force_datastore_put:
-      db.put(self.tiles.values())
+      logging.debug("Forcing game tile datastore put.")
+      datastore_tiles = self.tiles.values()
+    else:
+      now = datetime.datetime.now()
+      for tile in self.tiles.values():
+        tdelta = now - tile.last_update_time
+        if tdelta.seconds > 30 or not tile.is_saved():
+          datastore_tiles.append(tile)
+          tile.last_update_time = now
+
+    if datastore_tiles:
+      logging.info("Putting %d game tiles to datastore." % len(datastore_tiles))
+      db.put(datastore_tiles)
+    else:
+      logging.debug("No game tiles put to datastore.")
+  
+  def _PutTilesToMemcache(self):
+    mapping = {}
+    for tile in self.tiles.values():
+      key = self._GetGameTileKeyName(tile.Id())
+      mapping[key] = pickle.dumps(tile)
+    
+    if len(mapping):
+      logging.info("Putting %d game tiles to memcache." % len(mapping))
+      memcache.set_multi(mapping)
+    else:
+      logging.debug("Not putting any game tiles to memcache.")
   
   def GetPlayer(self, email):
     logging.debug("Getting player %s" % email)
@@ -863,8 +895,9 @@ class GameTileWindow():
     encoded = memcache.get(self._GetGameTileKeyName(id))
     
     if not encoded:
-      logging.debug("Memcache game tile miss.")
+      logging.info("Memcache game tile miss.")
       return False
+    logging.info("Memcache game tile hit.")
     
     try:
       tile = pickle.loads(encoded)
@@ -875,7 +908,7 @@ class GameTileWindow():
       return False
   
   def _LoadGameTileFromDatastore(self, id):
-    logging.debug("Getting game tile %d from datastore.", id)
+    logging.info("Getting game tile %d from datastore.", id)
 
     # It would be nice to run this in a transaction, but we access this method
     # from the "create game entry" method, which would result in a nested
