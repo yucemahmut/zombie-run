@@ -147,18 +147,8 @@ class GameHandler(webapp.RequestHandler):
       return False
   
   def PutGame(self, game, force_db_put):
-    # Put to Datastore once every 30 seconds.
-    age = datetime.datetime.now() - game.last_update_time
-    game.last_update_time = datetime.datetime.now()
-
-    logging.info("Putting game to datastore.")
-    game.PutToDatastore()
-
-    # Put to Memcache.  TODO: put tiles to memcache
-    encoded = pickle.dumps(game)
-    if not memcache.set(game.key().name(), encoded):
-      logging.warn("Game set to Memcache failed.")
-
+    game.Put(force_db_put)
+    
   def Authorize(self, game):
     user = users.get_current_user()
     if not user:

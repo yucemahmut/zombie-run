@@ -46,4 +46,4 @@ def profile_main():
 
 
 if __name__ == '__main__':
-  real_main()
+  profile_main()
