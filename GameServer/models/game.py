@@ -1,7 +1,6 @@
 import datetime
 import logging
 import math
-import pickle
 import random
 import time
 import uuid
@@ -331,7 +330,7 @@ class Game(db.Model):
       self.put()
       self.last_update_time = now
 
-    encoded = pickle.dumps(self)
+    encoded = db.model_to_protobuf(self)
     if not memcache.set(self.key().name(), encoded):
       logging.warn("Game set to Memcache failed.")
 
@@ -748,7 +747,7 @@ class GameTileWindow():
     mapping = {}
     for tile in self.tiles.values():
       key = self._GetGameTileKeyName(tile.Id())
-      mapping[key] = pickle.dumps(tile)
+      mapping[key] = db.model_to_protobuf(tile)
     
     if len(mapping):
       logging.info("Putting %d game tiles to memcache." % len(mapping))
@@ -910,11 +909,11 @@ class GameTileWindow():
     logging.info("Memcache game tile hit.")
     
     try:
-      tile = pickle.loads(encoded)
+      tile = db.model_from_protobuf(encoded)
       self.tiles[id] = tile
       return True
-    except pickle.UnpicklingError, e:
-      logging.error("UnpicklingError on GameTile: %s" % e)
+    except db.Error, e:
+      logging.error("Protobuf Decode Error on GameTile: %s" % e)
       return False
   
   def _LoadGameTileFromDatastore(self, id):
