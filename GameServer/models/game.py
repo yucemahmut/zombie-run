@@ -233,17 +233,20 @@ class Zombie(Trigger):
 
     # Advance in 1-second increments.
     while seconds > 0:
-      distance_to_move = seconds * self.speed
       self.ComputeChasing(players)
+      
+      time = min(seconds, 1)
+      distance = time * self.speed
+      lat = self.Lat() + random.uniform(-0.5, 0.5)
+      lon = self.Lon() + random.uniform(-0.5, 0.5)
       if self.chasing:
-        distance = self.DistanceFrom(self.chasing)
-        self.MoveTowardsLatLon(self.chasing.Lat(),
-                               self.chasing.Lon(),
-                               min(distance, distance_to_move))
-      else:
-        random_lat = self.Lat() + random.uniform(-0.5, 0.5)
-        random_lon = self.Lon() + random.uniform(-0.5, 0.5)
-        self.MoveTowardsLatLon(random_lat, random_lon, distance_to_move)
+        lat = self.chasing.Lat()
+        lon = self.chasing.Lon()
+        distance = min(self.DistanceFrom(self.chasing), distance)
+      logging.debug("Zombie %s moving %s meters in %s seconds (%s m/s)" %
+                    (self.Id(), distance, time, distance / time))
+      self.MoveTowardsLatLon(lat, lon, distance)
+      
       seconds = seconds - 1
       
   def MoveTowardsLatLon(self, lat, lon, distance):
@@ -566,9 +569,9 @@ class GameTile(db.Model):
     return count / area
   
   def _AddZombie(self, zombie):
-    assert not self.HasZombie(zombie)
-    self.zombies.append(zombie.ToString())
-    self.decoded_zombies.append(zombie)
+    if not self.HasZombie(zombie):
+      self.zombies.append(zombie.ToString())
+      self.decoded_zombies.append(zombie)
   
   def HasZombie(self, zombie):
     for z in self.Zombies():
