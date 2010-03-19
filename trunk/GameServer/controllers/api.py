@@ -2,7 +2,6 @@ import datetime
 import logging
 import math
 import os
-import pickle
 import random
 import wsgiref.handlers
 import yaml
@@ -129,10 +128,10 @@ class GameHandler(webapp.RequestHandler):
       return False
     
     try:
-      self.game = pickle.loads(encoded)
+      self.game = db.model_from_protobuf(encoded)
       return True
-    except pickle.UnpicklingError, e:
-      logging.warn("UnpicklingError: %s" % e)
+    except db.Error, e:
+      logging.warn("Game Model decode from protobuf error: %s" % e)
       return False
     
   def LoadFromDatastore(self, key):
