@@ -145,7 +145,6 @@ var LocationProvider = Class.create({
       });
   },
   
-  
   //
   // W3C Location Handling
   //
@@ -172,7 +171,6 @@ var LocationProvider = Class.create({
   w3CLocationError: function(error) {
     return;
   },
-  
 
   //
   // Google Gears Location Handling
@@ -200,5 +198,18 @@ var LocationProvider = Class.create({
   
   googleGearsLocationError: function(error) {
     return;
+  },
+  
+  //
+  // Debug location handling
+  //
+  startDebuggingLocation: function(map) {
+    google.maps.event.addListener(map,
+        "click",
+        this.onClickLocationChanged.bind(this));
+  },
+  
+  onClickLocationChanged: function(mouseEvent) {
+    this.updateListeners(mouseEvent.latLng);
   },
 });
