@@ -34,11 +34,11 @@ var Fortification = Class.create({
   getCircle: function(map, latLng) {
     return new google.maps.Circle({
         center: latLng,
-        fillColor: "#AAAAFF",
+        fillColor: "#CC1623",
         fillOpacity: 0.2,
         map: map,
         radius: 100,
-        strokeColor: "#AAAAFF",
+        strokeColor: "#CC1623",
         strokeOpacity: 1.0,
         strokeWeight: 2,
         zIndex: 0,
