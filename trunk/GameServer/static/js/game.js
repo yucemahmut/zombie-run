@@ -15,6 +15,8 @@ var Game = Class.create({
     this.game_id = game_id;
     this.is_owner = false;
     this.fortify_signal = false;
+    // time of last fortification
+    this.last_fortified = 0;
     
     this.failed_requests = 0;
     this.messages_to_show = [];
@@ -33,7 +35,13 @@ var Game = Class.create({
   },
   
   fortify: function() {
-    this.fortify_signal = true;
+    var now = new Date().getTime();
+    if ((now - this.last_fortified) < 10 * 60 * 1000) {
+        this.showMessage(new TooFrequentFortificationMessage(), null);
+    } else {
+      this.fortify_signal = true;
+    }
+    this.last_fortified = now;
   },
   
   update: function() {
@@ -492,6 +500,14 @@ var SuccessfullyInvitedFriendMessage = Class.create(SimpleParagraphMessage, {
 var FailedToInviteFriendMessage = Class.create(SimpleParagraphMessage, {
   getSimpleMessage: function(ogs, ngs) {
     return "There was a problem inviting your friend.  Please try again soon.";
+  },
+});
+//The above message is not actually dependent on the game state, so we don't
+//register it in the list of the Game's messages.
+
+var TooFrequentFortificationMessage = Class.create(SimpleParagraphMessage, {
+  getSimpleMessage: function(ogs, ngs) {
+    return "You can only fortify once every ten minutes.";
   },
 });
 //The above message is not actually dependent on the game state, so we don't
