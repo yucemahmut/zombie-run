@@ -32,6 +32,7 @@ SW_LAT_PARAM = "swLat"
 SW_LON_PARAM = "swLon"
 NE_LAT_PARAM = "neLat"
 NE_LON_PARAM = "neLon"
+FORTIFY_PARAMETER = "fortify"
 
 
 class Error(Exception):
@@ -273,6 +274,8 @@ class PutHandler(GetHandler):
     player = game.GetPlayer(user.email())
     player.SetLocation(float(self.request.get(LATITUDE_PARAMETER)),
                        float(self.request.get(LONGITUDE_PARAMETER)))
+    if self.request.get(FORTIFY_PARAMETER):
+      player.Fortify()
     game.SetPlayer(player)
   
   def _PutAndAdvanceGame(self):

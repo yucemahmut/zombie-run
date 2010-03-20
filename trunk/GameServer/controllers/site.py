@@ -85,7 +85,7 @@ class HomepageHandler(api.GameHandler):
       return game
     
     player = Player(user=user)
-    # player.SetLocation(0, 0)
+    player.Fortify()
     game.AddPlayer(player)
     return game
   
@@ -100,6 +100,7 @@ class JoinHandler(HomepageHandler):
       game = self.GetGame(authorize=False)
       logging.info("Got game with id %d." % game.Id())
       self.AddPlayerToGame(game, user)
+      # A new player is always fortified at their starting point.
       logging.info("Added player to game.")
       self.PutGame(game, True)
       logging.info("Put Game.")

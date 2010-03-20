@@ -10,9 +10,11 @@ var Game = Class.create({
     this.game_data = new Object;
     this.zombies = new Array;
     this.players = new Array;
+    this.players_f = new Array;
     this.updating = false;
     this.game_id = game_id;
     this.is_owner = false;
+    this.fortify_signal = false;
     
     this.failed_requests = 0;
     this.messages_to_show = [];
@@ -30,6 +32,10 @@ var Game = Class.create({
     return true;
   },
   
+  fortify: function() {
+    this.fortify_signal = true;
+  },
+  
   update: function() {
     if (this.updating) {
       return;
@@ -41,6 +47,10 @@ var Game = Class.create({
     if (this.location) {
       parameters["lat"] = this.location.lat();
       parameters["lon"] = this.location.lng();
+      if (this.fortify_signal) {
+        parameters["fortify"] = "1";
+        this.fortify_signal = false;
+      }
       this.request("/rpc/put", parameters);
     } else {
       this.request("/rpc/get", parameters);
@@ -173,20 +183,29 @@ var Game = Class.create({
       // game_data.players.length - 1 because we don't want to draw the current
       // user.
       this.players.pop().remove();
+      this.players_f.pop().remove();
     }
     for (i = 0; i < this.game_data.players.length; ++i) {
       player = this.game_data.players[i];
-      if (player.email == this.game_data.player) {
-        // Don't draw the current user.  We show the current user's location
-        // with a blue dot.
-        continue;
-      }
-      
       latLng = new google.maps.LatLng(player.lat, player.lon);
+      fLatLng = new google.maps.LatLng(player.fortification.lat,
+    		  player.fortification.lon);
+
       if (i < this.players.length) {
         this.players[i].locationUpdate(latLng);
+        this.players_f[i].locationUpdate(fLatLng);
       } else {
-        this.players[this.players.length] = new Player(this.map, latLng);
+    	hide = false;
+        if (player.email == this.game_data.player) {
+          // Don't draw the current user.  We show the current user's location
+          // with a blue dot.
+          hide = true;
+        }
+
+        this.players[this.players.length] = 
+        	new Player(this.map, latLng, hide);
+        this.players_f[this.players_f.length] =
+        	new Fortification(this.map, fLatLng);
       }
     }
     
@@ -196,8 +215,10 @@ var Game = Class.create({
           this.game_data.destination.lon);
       if (this.destination) {
         this.destination.locationUpdate(destination_latlng);
+        this.destination_f.locationUpdate(destination_latlng);
       } else {
-        this.destination = new Destination(this.map, destination_latlng);
+        this.destination = new Destination(this.map, destination_latlng, false);
+        this.destination_f = new Fortification(this.map, destination_latlng);
       }
     }
   },
@@ -243,8 +264,10 @@ var Game = Class.create({
   locationSelected: function(latLng) {
     if (this.destination) {
       this.destination.remove();
+      this.destination_f.remove();
     }
-    this.destination = new Destination(this.map, latLng);
+    this.destination = new Destination(this.map, latLng, false);
+    this.destination_f = new Fortification(this.map, latLng);
     
     google.maps.event.removeListener(this.destinationPickClickListener);
      
