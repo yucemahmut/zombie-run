@@ -594,31 +594,35 @@ class GameTile(db.Model):
     return self.decoded_players
   
   def AddPlayer(self, player):
-    if not self.HasPlayer(player):
-      self.players.append(player.ToString())
-      self.player_emails.append(player.Email())
-      self._InvalidateDecodedPlayers()
+    logging.info("Adding player %s" % player.Email())
+    # assert not self.HasPlayer(player)
+    self.players.append(player.ToString())
+    self.player_emails.append(player.Email())
+    self._InvalidateDecodedPlayers()
+    assert self.HasPlayer(player)
   
   def HasPlayer(self, player):
-    # TODO: optimize.
     for p in self.Players():
       if p.Email() == player.Email():
+        logging.info("Has player %s" % p.Email())
         return True
     return False
   
   def RemovePlayer(self, player):
-    for i, p in enumerate(self.Players()):
-      if p.Email() == player.Email():
-        self.players.pop(i)
-        self.player_emails.pop(i)
-        break
-    self._InvalidateDecodedPlayers()
+    while self.HasPlayer(player):
+      for i, p in enumerate(self.Players()):
+        if p.Email() == player.Email():
+          self.players.pop(i)
+          self.player_emails.pop(i)
+          self._InvalidateDecodedPlayers()
+          break
     
   def SetPlayer(self, player):
     self.RemovePlayer(player)
     self.AddPlayer(player)
 
   def _InvalidateDecodedPlayers(self):
+    logging.info("Invalidating players.")
     self.decoded_players = None
   
   def Zombies(self):
