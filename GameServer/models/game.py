@@ -27,6 +27,8 @@ DEFAULT_ZOMBIE_DENSITY = 20.0  # zombies per square kilometer
 
 INFECTED_PLAYER_TRANSITION_SECONDS = 120
 
+DEFAULT_FORTIFICATION_RADIUS_METERS = 100
+
 # The size of a GameTile.  A GameTile will span an area that is defined by these
 # degree constants.  Note that pushing a changing to this parameter will
 # invalidate all previously recorded games with undefined consequences.
@@ -135,15 +137,25 @@ class Trigger(Entity):
     trigger interacts with the specified Player."""
     # By default, no action.
     pass   
+
+
+class Fortification(Trigger):
+  """A Fortification is a place that a player has secured, and which zombies
+  will stay away from.
   
+  It's descended from a Trigger so that the Destination can also be a
+  Fortification.  As a trigger, it does nothing.
+  """
+
 
 class Player(Trigger):
-  """A player is a player of the game, obviously I hope."""
+  """A player is a player of the game, obviously, I hope."""
 
   def __init__(self, encoded=None, user=None):
     self.infected = False
     self.is_zombie = False
     self.reached_destination = False
+    self.fortification = None
     Entity.__init__(self, encoded)
     if user:
       self.email = user.email()
@@ -158,6 +170,8 @@ class Player(Trigger):
       dict["infected_time"] = self.infected_time
     dict["is_zombie"] = self.is_zombie
     dict["reached_destination"] = self.reached_destination
+    if self.fortification:
+      dict["fortification"] = self.fortification.DictForJson()
     return dict
 
   def FromString(self, encoded):
@@ -168,6 +182,18 @@ class Player(Trigger):
       self.infected_time = obj["infected_time"]
     self.is_zombie = obj["is_zombie"]
     self.reached_destination = obj["reached_destination"]
+    if "fortification" in obj:
+      # Hacky, but done for the one time that we encode a sub-dictionary in the
+      # json dictionary.
+      fstring = json.dumps(obj["fortification"])
+      self.fortification = Fortification(fstring)
+      if not self.fortification.Lat() and not self.fortification.Lon() and \
+          self.Lat() and self.Lon():
+        # When we create a user, we don't have a location to set on the
+        # fortification, so we set a sentinal fortification that doesn't have
+        # a location.  If we see that we're in that situation, re-fortify until
+        # we have a location to set on the fortification.
+        self.Fortify()
   
   def Email(self):
     return self.email
@@ -202,6 +228,15 @@ class Player(Trigger):
   def Trigger(self, player):
     if self.IsZombie():
       player.Infect()
+  
+  def Fortify(self):
+    logging.info("Player %s fortifying." % self.Email())
+    self.fortification = Fortification()
+    if self.Lat() and self.Lon():
+      self.fortification.SetLocation(self.Lat(), self.Lon())
+  
+  def GetFortification(self):
+    return self.fortification
 
 
 class Zombie(Trigger):
@@ -219,7 +254,7 @@ class Zombie(Trigger):
   def Id(self):
     return self.guid
   
-  def Advance(self, seconds, player_iter):
+  def Advance(self, seconds, player_iter, fortifications_iter):
     """Meander some distance.
     
     Args:
@@ -230,21 +265,44 @@ class Zombie(Trigger):
     # Flatten the iterator to a list so that we can iterate over it several
     # times.
     players = [player for player in player_iter]
+    fortifications = [f for f in fortifications_iter]
 
     # Advance in 1-second increments.
     while seconds > 0:
       self.ComputeChasing(players)
       
+      vector = [0, 0]
+      
       time = min(seconds, 1)
       distance = time * self.speed
-      lat = self.Lat() + random.uniform(-0.5, 0.5)
-      lon = self.Lon() + random.uniform(-0.5, 0.5)
       if self.chasing:
-        lat = self.chasing.Lat()
-        lon = self.chasing.Lon()
-        distance = min(self.DistanceFrom(self.chasing), distance)
+        # If we're chasing someone, move toward them.  But scale this by 1/2 so
+        # that if a zombie happens to be inside a fortification with a player,
+        # the zombie moves away instead of being perfectly balanced
+        vector[0] += (self.chasing.Lat() - self.Lat()) / 2
+        vector[1] += (self.chasing.Lon() - self.Lon()) / 2
+
+      for fortification in fortifications:
+        if self.DistanceFrom(fortification) < \
+            DEFAULT_FORTIFICATION_RADIUS_METERS:
+          logging.debug("Zombie %s moving away from fortification." % self.Id())
+          vector[0] -= fortification.Lat() - self.Lat()
+          vector[1] -= fortification.Lon() - self.Lon()
+
+      # If we don't have a particular goal in mind, just meander randomly.
+      if vector[0] == 0 and vector[1] == 0:
+        vector[0] = random.uniform(-1, 1)
+        vector[1] = random.uniform(-1, 1)
+
+      lat = self.Lat() + vector[0]
+      lon = self.Lon() + vector[1]
+
+      # Don't travel more than the distance to our determined destination
+      distance = min(self.DistanceFromLatLon(lat, lon), distance)
+
       logging.debug("Zombie %s moving %s meters in %s seconds (%s m/s)" %
                     (self.Id(), distance, time, distance / time))
+
       self.MoveTowardsLatLon(lat, lon, distance)
       
       seconds = seconds - 1
@@ -293,7 +351,7 @@ class Zombie(Trigger):
       self.chasing_email = obj["chasing"]
 
 
-class Destination(Trigger):
+class Destination(Fortification):
   
   def Trigger(self, player):
     player.ReachedDestination()
@@ -392,6 +450,13 @@ class Game(db.Model):
           not player.IsInfected()):
         yield player
   
+  def Fortifications(self):
+    for player in self.Players():
+      if player.GetFortification():
+        yield player.GetFortification()
+    if self.destination:
+      yield self.Destination()
+  
   def AddPlayer(self, player):
     self._GameTileWindow().AddPlayer(player)
   
@@ -438,7 +503,9 @@ class Game(db.Model):
 
     updated_zombies = []
     for zombie in self.Zombies():
-      zombie.Advance(seconds_to_move, self.PlayersInPlay())
+      zombie.Advance(seconds_to_move, 
+                     self.PlayersInPlay(), 
+                     self.Fortifications())
       updated_zombies.append(zombie)
       
     for zombie in updated_zombies:
@@ -525,10 +592,10 @@ class GameTile(db.Model):
     return self.decoded_players
   
   def AddPlayer(self, player):
-    assert not self.HasPlayer(player)
-    self.players.append(player.ToString())
-    self.player_emails.append(player.Email())
-    self._InvalidateDecodedPlayers()
+    if not self.HasPlayer(player):
+      self.players.append(player.ToString())
+      self.player_emails.append(player.Email())
+      self._InvalidateDecodedPlayers()
   
   def HasPlayer(self, player):
     # TODO: optimize.
@@ -777,7 +844,7 @@ class GameTileWindow():
         if player.Email() == email:
           logging.debug("Found player %s in game tile %d" % (email, tile.Id()))
           return player
-    logging.error("Did not find player %s in any game tiles." % email)
+    logging.debug("Did not find player %s in any game tiles." % email)
     return None
   
   def Players(self):

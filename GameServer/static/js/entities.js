@@ -1,9 +1,13 @@
-// Note: the markers do not show up in Android.
-var Entity = Class.create({
-  initialize: function(map, location) {
+var MarkerEntity = Class.create({
+  initialize: function(map, location, hidden) {
     this.map = map;
     this.location = location;
-    this.marker = this.getMarker(this.map, this.location);
+    this.hidden = hidden
+    if (hidden) {
+      this.marker = this.getMarker(null, this.location);
+    } else {
+      this.marker = this.getMarker(this.map, this.location);
+    }
   },
   
   getMarker: function(map, latLng) {
@@ -20,7 +24,38 @@ var Entity = Class.create({
   },
 });
 
-var Player = Class.create(Entity, {
+var Fortification = Class.create({
+  initialize: function(map, location) {
+	this.map = map;
+	this.location = location;
+	this.circle = this.getCircle(this.map, this.location);
+  },
+  
+  getCircle: function(map, latLng) {
+    return new google.maps.Circle({
+        center: latLng,
+        fillColor: "#AAAAFF",
+        fillOpacity: 0.2,
+        map: map,
+        radius: 100,
+        strokeColor: "#AAAAFF",
+        strokeOpacity: 1.0,
+        strokeWeight: 2,
+        zIndex: 0,
+      });
+  },
+  
+  remove: function() {
+    this.circle.setMap(null)
+  },
+  
+  locationUpdate: function(location) {
+    this.location = location;
+    this.marker.setCenter(this.location);
+  },
+});
+
+var Player = Class.create(MarkerEntity, {
   getMarker: function(map, latLng) {
     var markerimage = new google.maps.MarkerImage(
         "res/player.png",
@@ -35,7 +70,7 @@ var Player = Class.create(Entity, {
   },
 });
 
-var Zombie = Class.create(Entity, {
+var Zombie = Class.create(MarkerEntity, {
   initialize: function($super, map, location, isNoticingPlayer) {
     this.meanderingIcon = new google.maps.MarkerImage(
         "res/zombie_meandering.png",
@@ -44,7 +79,7 @@ var Zombie = Class.create(Entity, {
         "res/zombie_chasing.png",
         new google.maps.Size(14, 30))
     this.isNoticingPlayer = isNoticingPlayer;
-    $super(map, location);
+    $super(map, location, false);
   },
   
   setIsNoticingPlayer: function(isNoticingPlayer) {
@@ -69,7 +104,7 @@ var Zombie = Class.create(Entity, {
   },
 });
 
-var Destination = Class.create(Entity, {
+var Destination = Class.create(MarkerEntity, {
   getMarker: function(map, latLng) {
     var markerimage = new google.maps.MarkerImage(
         "res/flag.png",
@@ -84,7 +119,7 @@ var Destination = Class.create(Entity, {
   },
 });
 
-var MyLocation = Class.create(Entity, {
+var MyLocation = Class.create(MarkerEntity, {
   getMarker: function(map, latLng) {
     var markerimage = new google.maps.MarkerImage(
         "res/YourLocationDot.png",
