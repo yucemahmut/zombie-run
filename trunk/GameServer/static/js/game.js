@@ -311,6 +311,10 @@ var Game = Class.create({
   addFriendFailed: function() {
     this.showMessage(new FailedToInviteFriendMessage(), null);
   },
+  
+  startDebuggingLocation: function() {
+    this.locationProvider.startDebuggingLocation(this.map);
+  },
 });
 
 Object.extend(Game, {
