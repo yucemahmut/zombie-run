@@ -526,6 +526,8 @@ class Game(db.Model):
         if player.DistanceFrom(zombie) < TRIGGER_DISTANCE_METERS:
           zombie.Trigger(player)
       self.SetPlayer(player)
+    
+    self._GameTileWindow().RepopulateZombies()
 
 
 def ZombieEquals(a, b):
@@ -895,6 +897,10 @@ class GameTileWindow():
       new_tile._AddZombie(zombie)
     else:
       new_tile.SetZombie(zombie)
+  
+  def RepopulateZombies(self):
+    for tile in self.tiles.itervalues():
+      tile.PopulateZombies()
     
   def _TileForEntity(self, entity):
     return self._TileForLatLon(entity.Lat(), entity.Lon())
