@@ -441,7 +441,7 @@ class Game(db.Model):
                                    PLAYER_VISION_DISTANCE_METERS)
     return self.window
   
-  def _InVisibleWindow(self, entity):
+  def IsVisible(self, entity):
     if entity.Lat() is None or entity.Lon() is None:
       logging.debug("Excluding an entity outside the visible window because "
                     "it doesn't have a location.")
@@ -479,7 +479,7 @@ class Game(db.Model):
         Iterable of (player_index, player) tuples.
     """
     for player in self.Players():
-      if (self._InVisibleWindow(player) and
+      if (self.IsVisible(player) and
           not player.HasReachedDestination() and
           not player.IsInfected()):
         yield player
@@ -529,7 +529,7 @@ class Game(db.Model):
   
   def VisibleEntities(self):
     for entity in self.Entities():
-      if self._InVisibleWindow(entity):
+      if self.IsVisible(entity):
         yield entity
   
   def Advance(self):

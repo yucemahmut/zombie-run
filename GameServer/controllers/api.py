@@ -173,9 +173,14 @@ class GameHandler(webapp.RequestHandler):
     
     # We always return the location of all the players, as it's important that
     # the clients see all player state changes.
-    dictionary["players"] = [x.DictForJson() for x in game.Players()]
+    dictionary["players"] = [x.DictForJson() for 
+                             x in 
+                             game.Players()]
 
-    dictionary["zombies"] = [x.DictForJson() for x in game.Zombies()]
+    dictionary["zombies"] = [x.DictForJson() for 
+                             x in 
+                             game.Zombies() if 
+                             game.IsVisible(x)]
     
     if game.destination is not None:
       destination_dict = json.loads(game.destination)
