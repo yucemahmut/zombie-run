@@ -37,8 +37,9 @@ var Game = Class.create({
   fortify: function() {
     var now = new Date().getTime();
     if ((now - this.last_fortified) < 10 * 60 * 1000) {
-        this.showMessage(new TooFrequentFortificationMessage(), null);
+      this.showMessage(new TooFrequentFortificationMessage(), null);
     } else {
+	  this.showMessage(new FortifyingMessage(), null);
       this.fortify_signal = true;
     }
     this.last_fortified = now;
@@ -104,12 +105,12 @@ var Game = Class.create({
    * Show an array of Messages.
    * 
    * @param messages: an array of AbstractMessage objects.
-   * @param new_gamestate: The new game state, to be compared with
+   * @param ngs: The new game state, to be compared with
    *     this.game_data.  Will be used to calculate the message representation.
    */
-  showMessages: function(messages, new_gamestate) {
+  showMessages: function(messages, ngs) {
     for (var i = 0; i < messages.length; ++i) {
-      this.showMessage(messages[i], new_gamestate);
+      this.showMessage(messages[i], ngs);
     }
   },
   
@@ -117,11 +118,11 @@ var Game = Class.create({
    * Show a single Message.
    * 
    * @param message: a single AbstractMessage object.
-   * @param new_gamestate: The new game state, to be compared with
+   * @param ngs: The new game state, to be compared with
    *     this.game_data.  Will be used to calculate the message representation.
    */
-  showMessage: function(message, new_gamestate) {
-    message.computeMessage(this.game_data, new_gamestate);
+  showMessage: function(message, ngs) {
+    message.computeMessage(this.game_data, ngs);
     this.message_handler.showMessage(message);
   },
   
@@ -332,15 +333,15 @@ var AbstractMessage = Class.create({
    * 
    * Return: true or false.
    */
-  shouldShow: function(old_gamestate, new_gamestate) {
+  shouldShow: function(ogs, ngs) {
     return false;
   },
   
   /**
    * Compute the string that this message should display.  Will only be called
-   * if shouldShow(old_gamestate, new_gamestate) returns True.
+   * if shouldShow(ogs, ngs) returns True.
    */
-  computeMessage: function(old_gamestate, new_gamestate) { },
+  computeMessage: function(ogs, ngs) { },
   
   /**
    * Populate the provided DOM node with whatever contents the message should
@@ -453,7 +454,7 @@ var SimpleParagraphMessage = Class.create(AbstractMessage, {
   /**
    * Implementations should override this method.
    */
-  getSimpleMessage: function(old_gamestate, new_gamestate) {
+  getSimpleMessage: function(ogs, ngs) {
     return "";
   },
   
@@ -504,6 +505,14 @@ var SuccessfullyInvitedFriendMessage = Class.create(SimpleParagraphMessage, {
 var FailedToInviteFriendMessage = Class.create(SimpleParagraphMessage, {
   getSimpleMessage: function(ogs, ngs) {
     return "There was a problem inviting your friend.  Please try again soon.";
+  },
+});
+//The above message is not actually dependent on the game state, so we don't
+//register it in the list of the Game's messages.
+
+var FortifyingMessage = Class.create(SimpleParagraphMessage, {
+  getSimpleMessage: function(ogs, ngs) {
+    return "Fortifying.  You can fortify again after 10 minutes.";
   },
 });
 //The above message is not actually dependent on the game state, so we don't
@@ -595,24 +604,64 @@ var PlayerJoinedGameMessage = Class.create(SimpleParagraphMessage, {
 });
 Game.all_messages.push(new PlayerJoinedGameMessage());
 
+var PlayerReachesDestinationMessage = Class.create(SimpleParagraphMessage, {
+  shouldShow: function($super, ogs, ngs) {
+    return this.getNewlyFinishedPlayers(ogs, ngs).length > 0;
+  },
+  getSimpleMessage: function(ogs, ngs) {
+    newlyFinished = this.getNewlyFinishedPlayers(ogs, ngs);
+    if (newlyFinished.length > 1) {
+      last = newlyFinished[newlyFinished.length - 1];
+      newlyFinished[newlyFinished.length - 1] = "and " + last;
+      return newlyFinished.join(", ") + " have reached the destination!";
+    } else if (newlyFinished[0] == ngs.player) {
+      return "You have reached the destination!";
+    } else {
+      return newlyFinished[0] + " has reached the destination!";
+    }
+  },
+  getNewlyFinishedPlayers: function(ogs, ngs) {
+    var ostate = [];
+    if (ogs != null && ogs.players != null) {
+      for (var i = 0; i < ogs.players.length; i++) {
+        player = ogs.players[i];
+        ostate[player.email] = player.reached_destination;
+      }
+    }
+    
+    var newlyFinished = [];
+    if (ngs != null && ngs.players != null) {
+      for (var i = 0; i < ngs.players.length; i++) {
+        player = ngs.players[i];
+        if (player.reached_destination && !ostate[player.email]) {
+          newlyFinished[newlyFinished.length] = player.email;
+        }
+      }
+    }
+    return newlyFinished;
+  },
+});
+Game.all_messages.push(new PlayerReachesDestinationMessage());
+
+
 /**
  * Base Message for all messages that relate to the end of the game.
  */
 var AbstractGameOverMessage = Class.create(SimpleParagraphMessage, {
-  shouldShow: function($super, old_gamestate, new_gamestate) {
-    return old_gamestate.started &&
-           !old_gamestate.done &&
-           new_gamestate.done;
+  shouldShow: function($super, ogs, ngs) {
+    return ogs.started &&
+           !ogs.done &&
+           ngs.done;
   }
 });
 
 var AllHumansSurviveMessage = Class.create(AbstractGameOverMessage, {
-  shouldShow: function($super, old_gamestate, new_gamestate) {
-    if (!$super(old_gamestate, new_gamestate)) {
+  shouldShow: function($super, ogs, ngs) {
+    if (!$super(ogs, ngs)) {
       return false;
     }
-    for (var i = 0; i < new_gamestate.players.length; i++) {
-      if (new_gamestate.players[i].infected) {
+    for (var i = 0; i < ngs.players.length; i++) {
+      if (ngs.players[i].infected) {
         // At least one player was infected.
         return false;
       }
@@ -620,7 +669,7 @@ var AllHumansSurviveMessage = Class.create(AbstractGameOverMessage, {
     // No players were infected!
     return true;
   },
-  getSimpleMessage: function(old_gamestate, new_gamestate) {
+  getSimpleMessage: function(ogs, ngs) {
     return "All uninfected humans have reached the destination!  Humanity is " +
         "safe!";
   }
@@ -628,12 +677,12 @@ var AllHumansSurviveMessage = Class.create(AbstractGameOverMessage, {
 Game.all_messages.push(new AllHumansSurviveMessage());
 
 var AllHumansInfectedMessage = Class.create(AbstractGameOverMessage, {
-  shouldShow: function($super, old_gamestate, new_gamestate) {
-    if (!$super(old_gamestate, new_gamestate)) {
+  shouldShow: function($super, ogs, ngs) {
+    if (!$super(ogs, ngs)) {
       return false;
     }
-    for (var i = 0; i < new_gamestate.players.length; i++) {
-      if (!new_gamestate.players[i].infected) {
+    for (var i = 0; i < ngs.players.length; i++) {
+      if (!ngs.players[i].infected) {
         // At least one player was not infected.
         return false;
       }
@@ -642,7 +691,7 @@ var AllHumansInfectedMessage = Class.create(AbstractGameOverMessage, {
     return true;
   },
   
-  getSimpleMessage: function(old_gamestate, new_gamestate) {
+  getSimpleMessage: function(ogs, ngs) {
     return "All humans infected!  Humanity is lost!";
   }
 });
