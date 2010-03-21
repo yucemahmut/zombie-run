@@ -307,7 +307,6 @@ class StartHandler(PutHandler):
     destination.SetLocation(lat, lon)
     game.SetDestination(destination)
 
-    self.UpdateCurrentPlayer(game)
     self.PutGame(game, True)
     self.OutputGame(game)
     

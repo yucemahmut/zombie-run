@@ -861,18 +861,25 @@ class GameTileWindow():
       logging.debug("Not putting any game tiles to memcache.")
   
   def GetPlayer(self, email):
-    # Do we already have this player in view?
-    for player in self.Players():
-      if player.Email() == email:
-        logging.debug("Found player %s in preloaded game tiles." % email)
-        return player
+    def FindInLoadedTiles(email):
+      # Do we already have this player in view?
+      for player in self.Players():
+        if player.Email() == email:
+          logging.debug("Found player %s in preloaded game tiles." % email)
+          return player
+    
+    player = FindInLoadedTiles(email)
+    if player:
+      return player
     
     # Do we have the player's location registered in memcache?
     tile_id = memcache.get(self._GetPlayerTileLocationKeyName(email))
     if tile_id:
       logging.info("Found location of player %s from memcache." % email)
       self._LoadGameTile(tile_id)
-      return self.GetPlayer(email)
+      player = FindInLoadedTiles(email)
+      if player:
+        return player
 
     # Query the datastore for the game tile that contains the player, and load
     # it.
@@ -887,7 +894,9 @@ class GameTileWindow():
       logging.info("Found player %s in game tile %d from datastore." %
                    (email, tile.Id()))
       self.tiles[tile.Id()] = tile
-      return self.GetPlayer(email)
+      player = FindInLoadedTiles(email)
+      if player:
+        return player
 
     logging.warn("Did not find player %s in any game tiles." % email)
     return None
