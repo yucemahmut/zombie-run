@@ -51,7 +51,7 @@ var Fortification = Class.create({
   
   locationUpdate: function(location) {
     this.location = location;
-    this.marker.setCenter(this.location);
+    this.circle.setCenter(this.location);
   },
 });
 

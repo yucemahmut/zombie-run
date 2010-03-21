@@ -74,7 +74,7 @@ class Entity():
     self.location = (None, None)
     if encoded:
       self.FromString(encoded)
-  
+      
   def DictForJson(self):
     return {"lat": self.Lat(), "lon": self.Lon()}
   
@@ -151,14 +151,15 @@ class Fortification(Trigger):
 class Player(Trigger):
   """A player is a player of the game, obviously, I hope."""
 
-  def __init__(self, encoded=None, user=None):
+  def __init__(self, encoded=None, user=None, tile=None):
     self.infected = False
     self.is_zombie = False
     self.reached_destination = False
     self.fortification = None
-    Entity.__init__(self, encoded)
     if user:
       self.email = user.email()
+    self.tile = tile
+    Entity.__init__(self, encoded)
   
   def DictForJson(self):
     if self.email is None:
@@ -187,34 +188,56 @@ class Player(Trigger):
       # json dictionary.
       fstring = json.dumps(obj["fortification"])
       self.fortification = Fortification(fstring)
-      if not self.fortification.Lat() and not self.fortification.Lon() and \
-          self.Lat() and self.Lon():
-        # When we create a user, we don't have a location to set on the
-        # fortification, so we set a sentinal fortification that doesn't have
-        # a location.  If we see that we're in that situation, re-fortify until
-        # we have a location to set on the fortification.
-        self.Fortify()
+  
+  def _Commit(self):
+    if self.tile:
+      self.tile.SetPlayer(self)
   
   def Email(self):
     return self.email
   
   def Invalidate(self, timedelta):
-    """Determines whether or not the player has transitioned from infected to
-    zombie."""
+    # Has the player transitioned from an infected person to a zombie?
     if self.infected and \
        time.time() - self.infected_time > \
            INFECTED_PLAYER_TRANSITION_SECONDS:
       self.is_zombie = True
+
+    # Zombies can't fortify.
+    if self.is_zombie:
+      self.fortification = None
+    
+    if self.fortification and \
+        not self.fortification.Lat() and \
+        not self.fortification.Lon() and \
+        self.Lat() and \
+        self.Lon():
+      # When we create a user, we don't have a location to set on the
+      # fortification, so we set a sentinal fortification that doesn't have
+      # a location.  If we see that we're in that situation, re-fortify until
+      # we have a location to set on the fortification.
+      self.Fortify()
+
+    # A fortification expires when the player leaves it.
+    if self.GetFortification() and \
+        self.DistanceFrom(self.GetFortification()) > \
+        DEFAULT_FORTIFICATION_RADIUS_METERS:
+      self.fortification = None
+
+    self._Commit()
       
   def Infect(self):
     """Call to trigger this Player getting infected by a zombie."""
-    self.infected = True
-    self.infected_time = time.time()
+    if not self.IsInfected():
+      self.infected = True
+      self.infected_time = time.time()
+      self._Commit()
     
   def ReachedDestination(self):
     """Call to indicate that this player has reached the game's destination."""
     logging.info("Player reached destination.")
     self.reached_destination = True
+    self._Commit()
   
   def HasReachedDestination(self):
     return self.reached_destination
@@ -230,10 +253,14 @@ class Player(Trigger):
       player.Infect()
   
   def Fortify(self):
-    logging.info("Player %s fortifying." % self.Email())
-    self.fortification = Fortification()
+    logging.info("Player %s fortifying." % self.ToString())
+    if not self.fortification:
+      self.fortification = Fortification()
+    
     if self.Lat() and self.Lon():
       self.fortification.SetLocation(self.Lat(), self.Lon())
+    logging.info("Player fortified: %s" % self.ToString())
+    self._Commit()
   
   def GetFortification(self):
     return self.fortification
@@ -299,9 +326,6 @@ class Zombie(Trigger):
 
       # Don't travel more than the distance to our determined destination
       distance = min(self.DistanceFromLatLon(lat, lon), distance)
-
-      logging.debug("Zombie %s moving %s meters in %s seconds (%s m/s)" %
-                    (self.Id(), distance, time, distance / time))
 
       self.MoveTowardsLatLon(lat, lon, distance)
       
@@ -387,7 +411,7 @@ class Game(db.Model):
     now = datetime.datetime.now()
     tdelta = now - self.last_update_time
     if force_db_put or tdelta.seconds > 30:
-      logging.info("Putting game to datastore.")
+      logging.debug("Putting game to datastore.")
       self.put()
       self.last_update_time = now
 
@@ -417,6 +441,17 @@ class Game(db.Model):
                                    PLAYER_VISION_DISTANCE_METERS)
     return self.window
   
+  def _InVisibleWindow(self, entity):
+    if entity.Lat() is None or entity.Lon() is None:
+      logging.debug("Excluding an entity outside the visible window because "
+                    "it doesn't have a location.")
+      return False
+    return DistanceBetween(self.lat,
+                           self.lon, 
+                           entity.Lat(),
+                           entity.Lon()) < PLAYER_VISION_DISTANCE_METERS
+
+  
   def Id(self):
     # Drop the "g" at the beginning of the game key name.
     return int(self.key().name()[1:])
@@ -444,14 +479,13 @@ class Game(db.Model):
         Iterable of (player_index, player) tuples.
     """
     for player in self.Players():
-      if (player.Lat() and 
-          player.Lon() and 
+      if (self._InVisibleWindow(player) and
           not player.HasReachedDestination() and
           not player.IsInfected()):
         yield player
   
   def Fortifications(self):
-    for player in self.Players():
+    for player in self.PlayersInPlay():
       if player.GetFortification():
         yield player.GetFortification()
     if self.destination:
@@ -493,13 +527,22 @@ class Game(db.Model):
       yield player
     yield self.Destination()
   
+  def VisibleEntities(self):
+    for entity in self.Entities():
+      if self._InVisibleWindow(entity):
+        yield entity
+  
   def Advance(self):
     timedelta = datetime.datetime.now() - self.last_update_time
     seconds = timedelta.seconds + timedelta.microseconds / float(1e6)
     seconds_to_move = min(seconds, MAX_TIME_INTERVAL_SECS)
     
-    for entity in self.Entities():
+    for entity in self.VisibleEntities():
       entity.Invalidate(timedelta)
+    for player in self.Players():
+      self.SetPlayer(player)
+    for zombie in self.Zombies():
+      self.SetZombie(zombie)
 
     updated_zombies = []
     for zombie in self.Zombies():
@@ -527,7 +570,7 @@ class Game(db.Model):
           zombie.Trigger(player)
       self.SetPlayer(player)
     
-    self._GameTileWindow().RepopulateZombies()
+    # self._GameTileWindow().RepopulateZombies()
 
 
 def ZombieEquals(a, b):
@@ -587,24 +630,19 @@ class GameTile(db.Model):
     return self.NW()[0] - GAME_TILE_LAT_SPAN, self.NW()[1] + GAME_TILE_LON_SPAN
   
   def Players(self):
-    if self.decoded_players is not None:
-      return self.decoded_players
-    
-    self.decoded_players = [Player(e) for e in self.players]
-    return self.decoded_players
+    return [Player(e, tile=self) for e in self.players]
   
   def AddPlayer(self, player):
-    logging.info("Adding player %s" % player.Email())
-    # assert not self.HasPlayer(player)
+    logging.debug("Adding player %s to tile %s" %
+                  (player.ToString(), self.Id()))
+    if self.HasPlayer(player):
+      self.RemovePlayer(player)
     self.players.append(player.ToString())
     self.player_emails.append(player.Email())
-    self._InvalidateDecodedPlayers()
-    assert self.HasPlayer(player)
   
   def HasPlayer(self, player):
     for p in self.Players():
       if p.Email() == player.Email():
-        logging.info("Has player %s" % p.Email())
         return True
     return False
   
@@ -612,19 +650,16 @@ class GameTile(db.Model):
     while self.HasPlayer(player):
       for i, p in enumerate(self.Players()):
         if p.Email() == player.Email():
+          logging.debug("Removing player %s from tile %d" %
+                        (player.Email(), self.Id()))
           self.players.pop(i)
           self.player_emails.pop(i)
-          self._InvalidateDecodedPlayers()
           break
     
   def SetPlayer(self, player):
     self.RemovePlayer(player)
     self.AddPlayer(player)
 
-  def _InvalidateDecodedPlayers(self):
-    logging.info("Invalidating players.")
-    self.decoded_players = None
-  
   def Zombies(self):
     if self.decoded_zombies is not None:
       return self.decoded_zombies
@@ -662,8 +697,6 @@ class GameTile(db.Model):
                  (zombie.ToString(), self.Id()))
   
   def SetZombie(self, zombie):
-    logging.debug("Setting zombie %s in game tile %d" %
-                  (zombie.ToString(), self.Id()))
     for i, z in enumerate(self.Zombies()):
       if ZombieEquals(z, zombie):
         self.zombies[i] = zombie.ToString()
@@ -741,14 +774,15 @@ class GameTileWindow():
   """A GameTileWindow is a utility class for dealing with a set of GameTiles."""
 
   def __init__(self, game, lat, lon, radius_meters):
-    logging.info("Initializing GameTileWIndow for lat, lon (%f, %f)" %
+    logging.debug("Initializing GameTileWindow for lat, lon (%f, %f)" %
                  (lat, lon))
     self.game = game
-    # Retrieve the game tiles that intersect the circle described by the lat,
-    # lon, and radius.
-    #
-    # Create and populate them with zombies if they don't exist.
+    
+    # Map from game tile id to game tile instance.
     self.tiles = {}
+    
+    # Map from player email to game tile id.
+    self.players = {}
     
     self.lat = lat
     self.lon = lon
@@ -762,6 +796,7 @@ class GameTileWindow():
     while DistanceBetween(lat, lon, nLat, lon) < radius_meters:
       nLat += GAME_TILE_LAT_SPAN
       sLat -= GAME_TILE_LAT_SPAN
+
     # Expand wLon and eLon to span a distance that is >= radius_meters
     while DistanceBetween(lat, lon, lat, wLon) < radius_meters:
       wLon -= GAME_TILE_LON_SPAN
@@ -776,7 +811,7 @@ class GameTileWindow():
         self._TileForLatLon(tileLat, tileLon)
         tileLon += GAME_TILE_LON_SPAN
       tileLat -= GAME_TILE_LAT_SPAN
-    logging.info("Loaded %d GameTiles." % len(self.tiles))
+    logging.debug("Loaded %d GameTiles." % len(self.tiles))
     
   def Lat(self):
     return self.lat
@@ -784,18 +819,8 @@ class GameTileWindow():
   def Lon(self):
     return self.lon
     
-  def _InVisibleWindow(self, entity):
-    if entity.Lat() is None or entity.Lon() is None:
-      logging.debug("Excluding an entity outside the visible window because "
-                    "it doesn't have a location.")
-      return False
-    return DistanceBetween(self.lat,
-                           self.lon, 
-                           entity.Lat(),
-                           entity.Lon()) < PLAYER_VISION_DISTANCE_METERS
-    
   def PutTiles(self, force_datastore_put=True):
-    logging.info("Putting %d game tiles." % len(self.tiles))
+    logging.debug("Putting %d game tiles." % len(self.tiles))
     self._PutTilesToDatastore(force_datastore_put)
     self._PutTilesToMemcache()
     
@@ -824,40 +849,53 @@ class GameTileWindow():
     for tile in self.tiles.values():
       key = self._GetGameTileKeyName(tile.Id())
       mapping[key] = db.model_to_protobuf(tile)
-    
+
+    for email in self.players:
+      key = self._GetPlayerTileLocationKeyName(email)
+      mapping[key] = self.players[email]
+      
     if len(mapping):
-      logging.info("Putting %d game tiles to memcache." % len(mapping))
+      logging.debug("Putting %d game tiles to memcache." % len(mapping))
       memcache.set_multi(mapping)
     else:
       logging.debug("Not putting any game tiles to memcache.")
   
   def GetPlayer(self, email):
-    logging.debug("Getting player %s" % email)
     # Do we already have this player in view?
     for player in self.Players():
       if player.Email() == email:
         logging.debug("Found player %s in preloaded game tiles." % email)
         return player
+    
+    # Do we have the player's location registered in memcache?
+    tile_id = memcache.get(self._GetPlayerTileLocationKeyName(email))
+    if tile_id:
+      logging.info("Found location of player %s from memcache." % email)
+      self._LoadGameTile(tile_id)
+      return self.GetPlayer(email)
 
-    logging.debug("Querying for game tile containing player %s" % email)
+    # Query the datastore for the game tile that contains the player, and load
+    # it.
+    logging.info("Querying datastore for game tile containing player %s" % 
+                 email)
     query = GameTile.all()
     query.filter("player_emails = ", email)
     query.filter("game = ", self.game)
     query.order("-last_update_time")
     tile = query.get()
     if tile is not None:
-      for player in tile.Players():
-        if player.Email() == email:
-          logging.debug("Found player %s in game tile %d" % (email, tile.Id()))
-          return player
-    logging.debug("Did not find player %s in any game tiles." % email)
+      logging.info("Found player %s in game tile %d from datastore." %
+                   (email, tile.Id()))
+      self.tiles[tile.Id()] = tile
+      return self.GetPlayer(email)
+
+    logging.warn("Did not find player %s in any game tiles." % email)
     return None
   
   def Players(self):
     for tile in self.tiles.itervalues():
       for player in tile.Players():
-        if self._InVisibleWindow(player):
-          yield player
+        yield player
 
   def AddPlayer(self, player):
     tile = self._TileForEntity(player)
@@ -866,21 +904,26 @@ class GameTileWindow():
   
   def RemovePlayer(self, player):
     old_player = self.GetPlayer(player.Email())
-    tile = self._TileForEntity(old_player)
-    logging.debug("Removing player %s from tile %d" %
-                  (player.Email(), tile.Id()))
-    tile.RemovePlayer(player)
+    for tile in self.tiles.itervalues():
+      tile.RemovePlayer(player)
   
   def SetPlayer(self, player):
     logging.debug("Setting player %s" % player.Email())
+    old_tile = self._TileForEntity(self.GetPlayer(player.Email()))
+    new_tile = self._TileForEntity(player)
     self.RemovePlayer(player)
     self.AddPlayer(player)
+    
+    if old_tile != new_tile:
+      self._PutTilesToMemcache()
+      self._PutTilesToDatastore(True)
 
   def Zombies(self):
+    zombies = []
     for tile in self.tiles.itervalues():
       for zombie in tile.Zombies():
-        if self._InVisibleWindow(zombie):
-          yield zombie
+        zombies.append(zombie)
+    return zombies
   
   def NumZombies(self):
     return sum([tile.NumZombies() for tile in self.tiles.itervalues()])
@@ -973,8 +1016,14 @@ class GameTileWindow():
       return self._GetOrCreateGameTile(id)
   
   def _LoadGameTile(self, id):
+    logging.debug("Loading game tile %d" % id)
     if (self._LoadGameTileFromMemcache(id) or
         self._LoadGameTileFromDatastore(id)):
+      # Build our player tile id cache.
+      for tile in self.tiles.itervalues():
+        for player in tile.Players():
+          self.players[player.Email()] = tile.Id()
+      
       return True
     return False
     
@@ -986,7 +1035,7 @@ class GameTileWindow():
     if not encoded:
       logging.info("Memcache game tile miss.")
       return False
-    logging.info("Memcache game tile hit.")
+    logging.debug("Memcache game tile hit.")
     
     try:
       tile = db.model_from_protobuf(encoded)
@@ -1007,7 +1056,7 @@ class GameTileWindow():
     logging.debug("Loading game tile %s from datastore." % tile_key)
     tile = GameTile.get_by_key_name(tile_key)
     if tile is None:
-      logging.info("Initializing new game tile %d" % id)
+      logging.debug("Initializing new game tile %d" % id)
       
       geopt = None
       if id != UNLOCATED_TILE_ID:
@@ -1023,3 +1072,6 @@ class GameTileWindow():
   
   def _GetGameTileKeyName(self, tile_id):
     return "g%d_gt%d" % (self.game.Id(), tile_id)
+  
+  def _GetPlayerTileLocationKeyName(self, email):
+    return "g%d_p%s" % (self.game.Id(), email)

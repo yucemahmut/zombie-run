@@ -36,6 +36,7 @@ var Game = Class.create({
   
   fortify: function() {
     var now = new Date().getTime();
+    this.fortify_signal = true;
     if ((now - this.last_fortified) < 10 * 60 * 1000) {
       this.showMessage(new TooFrequentFortificationMessage(), null);
     } else {
@@ -192,17 +193,17 @@ var Game = Class.create({
       // game_data.players.length - 1 because we don't want to draw the current
       // user.
       this.players.pop().remove();
-      this.players_f.pop().remove();
     }
+    var fortifications = [];
     for (i = 0; i < this.game_data.players.length; ++i) {
       player = this.game_data.players[i];
       latLng = new google.maps.LatLng(player.lat, player.lon);
-      fLatLng = new google.maps.LatLng(player.fortification.lat,
-    		  player.fortification.lon);
+      if (player.fortification) {
+        fortifications[fortifications.length] = player.fortification;
+      }
 
       if (i < this.players.length) {
         this.players[i].locationUpdate(latLng);
-        this.players_f[i].locationUpdate(fLatLng);
       } else {
     	hide = false;
         if (player.email == this.game_data.player) {
@@ -212,12 +213,24 @@ var Game = Class.create({
         }
 
         this.players[this.players.length] = 
-        	new Player(this.map, latLng, hide);
-        this.players_f[this.players_f.length] =
-        	new Fortification(this.map, fLatLng);
+        	new Player(this.map, latLng, false);
       }
     }
-    
+
+    while (this.players_f.length > fortifications.length) {
+      this.players_f.pop().remove();
+    }
+    for (var i = 0; i < fortifications.length; ++i) {
+      fortification = fortifications[i];
+      var fLatLng = new google.maps.LatLng(fortification.lat, fortification.lon);
+      if (i < this.players_f.length) {
+        this.players_f[i].locationUpdate(fLatLng);
+      } else {
+        this.players_f[this.players_f.length] =
+            new Fortification(this.map, fLatLng);
+      }
+    }
+
     if (this.game_data.destination) {
       var destination_latlng = new google.maps.LatLng(
           this.game_data.destination.lat,
