@@ -98,15 +98,14 @@ class GameHandler(webapp.RequestHandler):
     lon = 0
     if game_id is None:
       try:
-        # Try to get and parse an integer from the URL's hash tag.
-        game_id = int(self.request.get(GAME_ID_PARAMETER, None))
+        game_id = self.GetGameIdFromRequest()
         lat = float(self.request.get(LATITUDE_PARAMETER, lat))
         lon = float(self.request.get(LONGITUDE_PARAMETER, lon))
       except TypeError, e:
-        raise MalformedRequestError("Game id, lat, or lon not present in "
+        raise MalformedRequestError("lat, or lon not present in "
                                     "request or not properly valued.")
       except ValueError, e:
-        raise MalformedRequestError("Game id, lat, or lon not present in "
+        raise MalformedRequestError("lat, or lon not present in "
                                     "request or not properly valued.")
     
     game_key = self.GetGameKeyName(game_id)
@@ -118,6 +117,18 @@ class GameHandler(webapp.RequestHandler):
       return self.game
     else:
       raise GameNotFoundError()
+  
+  def GetGameIdFromRequest(self):
+    try:
+      # Try to get and parse an integer from the URL's hash tag.
+      return int(self.request.get(GAME_ID_PARAMETER, None))
+    except TypeError, e:
+      raise MalformedRequestError("Game id not present in "
+                                  "request or not properly valued.")
+    except ValueError, e:
+      raise MalformedRequestError("Game id not present in "
+                                  "request or not properly valued.")
+    return None
   
   def LoadFromMemcache(self, key):
     """Try loading the game from memcache.  Sets self.game, returns true if
@@ -194,8 +205,8 @@ class GameHandler(webapp.RequestHandler):
     # logging.info("Response: %s" % output)
     self.response.out.write(output)
     
-  def LoginUrl(self):
-    return users.create_login_url(self.request.uri)
+  def LoginUrl(self, landing=None):
+    return users.create_login_url(landing or self.request.uri)
     
   def RedirectToLogin(self):
     self.redirect(self.LoginUrl())

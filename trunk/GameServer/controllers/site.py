@@ -11,6 +11,9 @@ from models.game import GameTile
 from models.game import Player
 
 
+GLOBAL_GAME_ID = 1
+
+
 class HomepageHandler(api.GameHandler):
   
   def get(self):
@@ -48,7 +51,10 @@ class HomepageHandler(api.GameHandler):
     return tile.game
   
   def RenderLogin(self):
-    self.OutputTemplate({"login_url": self.LoginUrl()}, "intro.html")
+    data = {"login_url": self.LoginUrl(),
+            "global_game_login_url":
+                self.LoginUrl("/join?gid=%d" % GLOBAL_GAME_ID)}
+    self.OutputTemplate(data, "intro.html")
   
   def OutputTemplate(self, dict, template_name):
     path = os.path.join(os.path.dirname(__file__),
@@ -56,7 +62,7 @@ class HomepageHandler(api.GameHandler):
                         template_name)
     self.response.out.write(template.render(path, dict))
         
-  def CreateGame(self, user):
+  def CreateGame(self, user, game_id=None):
     def CreateNewGameIfAbsent(game_id):
       logging.info("Creating new game with id %d" % game_id)
       game_key = self.GetGameKeyName(game_id)
@@ -69,12 +75,16 @@ class HomepageHandler(api.GameHandler):
       return None
 
     magnitude = 2e16
-    game_id = None
     game = None
+    
+    if game_id and game_id == GLOBAL_GAME_ID:
+      CreateNewGameIfAbsent(game_id)
+      game = self.GetGame()
+    
     while game is None:
       # TODO: Limit this to not blow up the potential size of a game id to an
       # arbitrarily large number.
-      game_id = random.randint(0, magnitude)
+      game_id = random.randint(2, magnitude)
       game = CreateNewGameIfAbsent(game_id)
       magnitude = magnitude * 10 + 9
     return game
@@ -97,6 +107,10 @@ class JoinHandler(HomepageHandler):
     if not user:
       self.RenderLogin()
     else:
+      game_id = self.GetGameIdFromRequest()
+      if game_id == GLOBAL_GAME_ID:
+        self.CreateGame(user, game_id)
+      
       game = self.GetGame(authorize=False)
       logging.info("Got game with id %d." % game.Id())
       self.AddPlayerToGame(game, user)
