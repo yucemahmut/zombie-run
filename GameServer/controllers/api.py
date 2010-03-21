@@ -224,15 +224,9 @@ class GetHandler(GameHandler):
     players_infected = self._PlayersInfected(game)
     players_converted = self._PlayersConverted(game)
     game.Advance()
-    
-    # Conditions of the game that require that we serialize it all the way
-    # to persistent storage.  Currently, if the game has just completed, or
-    # if the number of infected
-    forceput = (self._PlayersInfected(game) != players_infected or
-                self._PlayersConverted(game) != players_converted)
-    
-    self.PutGame(game, forceput)
-    
+    # For some reason we lose some state when we only put the game to memcache,
+    # so for now we force put it to the datastore every time.
+    self.PutGame(game, False)
     return game
   
   def _PlayersInfected(self, game):
