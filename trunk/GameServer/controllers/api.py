@@ -75,7 +75,7 @@ class GameHandler(webapp.RequestHandler):
     """
     return "g%d" % game_id
   
-  def GetGame(self, game_id=None, authorize=True):
+  def GetGame(self, game_id=None, authorize=False):
     """Determines the game id and retreives the game data from the db.
     
     Args:
