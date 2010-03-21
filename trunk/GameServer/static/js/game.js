@@ -36,14 +36,13 @@ var Game = Class.create({
   
   fortify: function() {
     var now = new Date().getTime();
-    this.fortify_signal = true;
     if ((now - this.last_fortified) < 10 * 60 * 1000) {
       this.showMessage(new TooFrequentFortificationMessage(), null);
     } else {
 	  this.showMessage(new FortifyingMessage(), null);
       this.fortify_signal = true;
+      this.last_fortified = now;
     }
-    this.last_fortified = now;
   },
   
   update: function() {
