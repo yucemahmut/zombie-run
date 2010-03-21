@@ -213,7 +213,7 @@ var Game = Class.create({
         }
 
         this.players[this.players.length] = 
-        	new Player(this.map, latLng, false);
+        	new Player(this.map, latLng, hide);
       }
     }
 
