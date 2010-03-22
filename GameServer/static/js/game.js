@@ -3,7 +3,7 @@
  * game server.
  */
 var Game = Class.create({
-  initialize: function(map, message_handler, game_id) {
+  initialize: function(map, message_handler, game_id, debug) {
     this.map = map;
     this.message_handler = message_handler;
     this.location = false;
@@ -19,7 +19,11 @@ var Game = Class.create({
     this.last_fortified = 0;
     
     this.failed_requests = 0;
-    this.messages_to_show = [];
+    this.messages_to_show = new Array;
+    
+    this.tiles = new Array;
+    
+    this.debug = debug;
   },
   
   // start the game -- initialize location services.
@@ -52,6 +56,10 @@ var Game = Class.create({
   
     this.updating = true;
     var parameters = { 'gid': this.game_id };
+    
+    if (this.debug) {
+      parameters["d"] = "1";
+    }
     
     if (this.location) {
       parameters["lat"] = this.location.lat();
@@ -239,6 +247,18 @@ var Game = Class.create({
       } else {
         this.destination = new Destination(this.map, destination_latlng, false);
         this.destination_f = new Fortification(this.map, destination_latlng);
+      }
+    }
+    
+    while (this.tiles.length > 0) {
+      this.tiles.pop().remove();
+    }
+    if (this.game_data.debug && this.game_data.debug.tiles) {
+      for (var i = 0; i < this.game_data.debug.tiles.length; ++i) {
+        tile = this.game_data.debug.tiles[i];
+        var ne = new google.maps.LatLng(tile.ne.lat, tile.ne.lon);
+        var sw = new google.maps.LatLng(tile.sw.lat, tile.sw.lon);
+        this.tiles[this.tiles.length] = new Tile(this.map, ne, sw);
       }
     }
   },

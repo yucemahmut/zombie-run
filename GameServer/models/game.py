@@ -571,6 +571,9 @@ class Game(db.Model):
       self.SetPlayer(player)
     
     # self._GameTileWindow().RepopulateZombies()
+  
+  def GetDebugMap(self):
+    return self._GameTileWindow().GetDebugMap();
 
 
 def ZombieEquals(a, b):
@@ -957,6 +960,16 @@ class GameTileWindow():
   def RepopulateZombies(self):
     for tile in self.tiles.itervalues():
       tile.PopulateZombies()
+  
+  def GetDebugMap(self):
+    tiles = []
+    for tile in self.tiles.itervalues():
+      tiles.append({"ne": {"lat": tile.NW()[0],
+                           "lon": tile.SE()[1]},
+                    "sw": {"lat": tile.SE()[0],
+                           "lon": tile.NW()[1]}
+                   })
+    return {"tiles": tiles}
     
   def _TileForEntity(self, entity):
     return self._TileForLatLon(entity.Lat(), entity.Lon())

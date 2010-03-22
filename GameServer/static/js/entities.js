@@ -55,6 +55,33 @@ var Fortification = Class.create({
   },
 });
 
+var Tile = Class.create({
+  initialize: function(map, ne, sw) {
+	this.map = map;
+	this.ne = ne;
+	this.sw = sw;
+	this.rectangle = this.getRectangle(this.map, ne, sw);
+  },
+  
+  getRectangle: function(map, ne, sw) {
+	var bounds = new google.maps.LatLngBounds(sw, ne);
+    return new google.maps.Rectangle({
+        bounds: bounds,
+        fillColor: "#FF0000",
+        fillOpacity: 0.1,
+        map: map,
+        strokeColor: "#FF0000",
+        strokeOpacity: 1.0,
+        strokeWeight: 2,
+        zIndex: 0,
+      });
+  },
+  
+  remove: function() {
+    this.rectangle.setMap(null)
+  },
+});
+
 var Player = Class.create(MarkerEntity, {
   getMarker: function(map, latLng) {
     var markerimage = new google.maps.MarkerImage(

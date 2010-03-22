@@ -33,6 +33,7 @@ SW_LON_PARAM = "swLon"
 NE_LAT_PARAM = "neLat"
 NE_LON_PARAM = "neLon"
 FORTIFY_PARAMETER = "fortify"
+DEBUG_PARAMETER = "d"
 
 
 class Error(Exception):
@@ -198,6 +199,9 @@ class GameHandler(webapp.RequestHandler):
     if game.destination is not None:
       destination_dict = json.loads(game.destination)
       dictionary["destination"] = destination_dict
+    
+    if self.request.get(DEBUG_PARAMETER):
+      dictionary["debug"] = game.GetDebugMap()
     
     self.Output(json.dumps(dictionary))
   
