@@ -30,19 +30,19 @@
       <table width="100%" style="text-align: center;">
         <tr>
           <td>
+            <a href="#" onclick="javascript:gameInterface.moveToCurrentLocation();">
+              <img src="/res/YourLocationDot.png" width=16 height=16 border=0 />
+            </a>
+          </td>
+          <td>
             <a href="#" onclick="javascript:gameInterface.addFriend();">Add Friend</a>
           </td>
 	      <td>
-	        <a href="#" onclick="javascript:gameInterface.moveToCurrentLocation();">
-	          <img src="/res/YourLocationDot.png" width=16 height=16 border=0 />
-	        </a>
-	      </td>
-	      <td>
-	        <a href="/new">New Game</a>
-	      </td>
-	      <td>
 	        <a href="#" onclick="javascript:gameInterface.fortify();">Fortify</a>
 	      </td>
+          <td>
+            <a href="#" onclick="javascript:gameInterface.showMessage(new MenuMessage());">Menu</a>
+          </td>
         </tr>
       </table>
     </div>

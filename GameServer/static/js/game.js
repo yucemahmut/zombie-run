@@ -369,6 +369,27 @@ var AbstractMessage = Class.create({
   },
 });
 
+var MenuMessage = Class.create(AbstractMessage, {
+  populateMessage: function(dom_node, dismiss_callback) {
+    this.appendLink(dom_node, "/new", "New Game", dismiss_callback);
+    this.appendLink(dom_node,
+    		"/join?gid=1", 
+    		"Join Global Game", 
+    		dismiss_callback);
+    this.appendLink(dom_node, "#", "dismiss", dismiss_callback);
+  },
+  
+  appendLink: function(dom_node, href, text, callback) {
+    var p = document.createElement("p");
+    dom_node.appendChild(p);
+    var new_a = document.createElement("a");
+    p.appendChild(new_a);
+    new_a.setAttribute("href", href);
+    new_a.onclick = callback;
+    new_a.appendChild(document.createTextNode(text));
+  },
+});
+
 var ChooseDestinationMessage = Class.create(AbstractMessage, {
   initialize: function(game) {
     this.game = game;
