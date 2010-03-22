@@ -37,7 +37,12 @@ class HomepageHandler(api.GameHandler):
       else:
         logging.info("Player %s playing game %d" % (user.email(), game.Id()))
         
-      self.OutputTemplate({"game_id": game.Id()},
+      debug = "false"
+      if self.request.get(api.DEBUG_PARAMETER) == "1":
+        logging.info("Debugging mode.")
+        debug = "true"
+      self.OutputTemplate({"game_id": game.Id(),
+                           "debug": debug},
                            "game.html")
   def GetLastGame(self, user):
     """Get the last game that this player has played, or None if the player

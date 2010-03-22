@@ -108,7 +108,7 @@
       // as a string, javascript interprets it as one less than the value.
       //
       // Integer overflow?
-      var game = new Game(map, message_handler, "{{ game_id }}");
+      var game = new Game(map, message_handler, "{{ game_id }}", {{ debug }});
       
       if (!game.start()) {
         switchView("errors");
