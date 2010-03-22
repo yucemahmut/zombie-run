@@ -85,7 +85,6 @@ var Game = Class.create({
       
       // Update our game state.
       this.game_data = json;
-      this.game_id = this.game_data.game_id;
     }
 
     // Note that we got a successful request through.
@@ -445,6 +444,7 @@ var ChooseDestinationMessage = Class.create(AbstractMessage, {
               };
     new google.maps.Geocoder().geocode(request,
             this.doneProcessingForm.bind(this));
+    return false;
   },
   
   doneProcessingForm: function(geocoder_responses, geocoder_status) {
