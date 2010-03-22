@@ -75,6 +75,8 @@ class GameHandler(webapp.RequestHandler):
     """
     return "g%d" % game_id
   
+  # HACK: authorize defaulted to false so that any player can join the global
+  # game.  Need to special-case that more effectively.
   def GetGame(self, game_id=None, authorize=False):
     """Determines the game id and retreives the game data from the db.
     
