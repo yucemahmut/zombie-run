@@ -103,11 +103,11 @@
       
       var map = new google.maps.Map(document.getElementById("map"), mapOptions);
 
-      <!-- Who knows why using the straight game id seems to be off by one in
-           javascript, but when we don't put the game id in quotes, to use it
-           as a string, javascript interprets it as one less than the value.
-
-           Integer overflow? -->
+      // Who knows why using the straight game id seems to be off by one in
+      // javascript, but when we don't put the game id in quotes, to use it
+      // as a string, javascript interprets it as one less than the value.
+      //
+      // Integer overflow?
       var game = new Game(map, message_handler, "{{ game_id }}");
       
       if (!game.start()) {
