@@ -11,13 +11,13 @@ from google.appengine.ext import webapp
 
 
 URL_BINDINGS = [
-                 ('/', site.HomepageHandler),
                  ('/join', site.JoinHandler),
                  ('/new', site.NewHandler),
                  ('/rpc/get', api.GetHandler),
                  ('/rpc/put', api.PutHandler),
                  ('/rpc/start', api.StartHandler),
                  ('/rpc/addFriend', api.AddFriendHandler),
+                 (r'/.*', site.HomepageHandler),
                ]
 REVERSE_URL_BINDINGS = {}
 
