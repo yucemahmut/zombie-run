@@ -581,44 +581,52 @@ var TooFrequentFortificationMessage = Class.create(SimpleParagraphMessage, {
 
 var HumanInfectedMessage = Class.create(SimpleParagraphMessage, {
   shouldShow: function($super, ogs, ngs) {
-    var ogs_num_infected = 0;
-    if (!ogs.players) {
+	this.getNewlyInfectedPlayers(ogs, ngs).length > 0;
+  },
+  
+  getNewlyInfectedPlayers: function(ogs, ngs) {
+    if (!ogs.players || !ngs.players) {
       return false;
     }
     
+    var player_states = [];
     for (var i = 0; i < ogs.players.length; ++i) {
-      if (ogs.players[i].infected) {
-        ogs_num_infected += 1;
+      player = ogs.players[i];
+      player_states[player.email] = 0;
+      if (player.infected) {
+        player_states[player.email] = 1;
       }
     }
     
-    var ngs_num_infected = 0;
+    var newly_infected = [];
     for (var i = 0; i < ngs.players.length; ++i) {
-      if (ngs.players[i].infected) {
-        ngs_num_infected += 1;
+      player = ngs.players[i];
+      if (player_states[player] &&
+		  player_states[player] == 0 &&
+          player.infected) {
+        newly_infected[newly_infected.length] = player.email;
       }
     }
     
-    return ogs_num_infected < ngs_num_infected;
+    return newly_infected;
   },
   
   getSimpleMessage: function(ogs, ngs) {
-    var newly_infected_players = [];
-    for (var i = 0; i < ogs.players.length; ++i) {
-      if (!ogs.players[i].infected && ngs.players[i].infected) {
-        newly_infected_players.push(ngs.players[i].email);
-      }
-    }
+    var newly_infected_players = this.getNewlyInfectedPlayers();
+    var base_message = "";
     if (newly_infected_players.length == 1) {
       if (newly_infected_players[0] == ngs.player) {
-        return "You were just infected by a zombie!";
+        base_message = "You were just infected by a zombie!";
       } else {
-        return newly_infected_players[0] + " was just infected by a zombie!";
+        base_message = newly_infected_players[0] + 
+        	" was just infected by a zombie!";
       }
     } else {
-      return newly_infected_players.join(", ") +
+      base_message = newly_infected_players.join(", ") +
           " were just infected by zombies!";
     }
+    base_message += "<br />";
+    base_message += "(players receive an antidote after an hour)";
   }
 });
 Game.all_messages.push(new HumanInfectedMessage());
