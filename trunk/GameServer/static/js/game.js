@@ -40,6 +40,13 @@ var Game = Class.create({
   
   fortify: function() {
     var now = new Date().getTime();
+    for (var i = 0; i < this.players.length; ++i) {
+      if (this.players[i].email == this.game_data.player &&
+    	  this.players[i].infected) {
+    	this.showMessage(new ZombiesCantFortifyMessage(), null);
+    	return;
+      }
+    }
     if ((now - this.last_fortified) < 10 * 60 * 1000) {
       this.showMessage(new TooFrequentFortificationMessage(), null);
     } else {
@@ -585,6 +592,16 @@ var FortifyingMessage = Class.create(SimpleParagraphMessage, {
 var TooFrequentFortificationMessage = Class.create(SimpleParagraphMessage, {
   getSimpleMessage: function(ogs, ngs) {
     return "You can only fortify once every ten minutes.";
+  },
+});
+//The above message is not actually dependent on the game state, so we don't
+//register it in the list of the Game's messages.
+
+
+var ZombiesCantFortifyMessage = Class.create(SimpleParagraphMessage, {
+  getSimpleMessage: function(ogs, ngs) {
+    return "Infected players can't fortify!  You're a zombie now, whose team " +
+    	"do you think you're on??";
   },
 });
 //The above message is not actually dependent on the game state, so we don't
