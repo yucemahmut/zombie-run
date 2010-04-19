@@ -27,6 +27,8 @@ DEFAULT_ZOMBIE_DENSITY = 20.0  # zombies per square kilometer
 
 INFECTED_PLAYER_TRANSITION_SECONDS = 120
 
+ZOMBIE_PLAYER_HEAL_SECONDS = 1 * 60 * 60
+
 DEFAULT_FORTIFICATION_RADIUS_METERS = 100
 
 # The size of a GameTile.  A GameTile will span an area that is defined by these
@@ -199,9 +201,16 @@ class Player(Trigger):
   def Invalidate(self, timedelta):
     # Has the player transitioned from an infected person to a zombie?
     if self.infected and \
+       not self.is_zombie and \
        time.time() - self.infected_time > \
            INFECTED_PLAYER_TRANSITION_SECONDS:
       self.is_zombie = True
+      
+    if self.is_zombie and \
+       time.time() - self.infected_time > \
+           ZOMBIE_PLAYER_HEAL_SECONDS:
+      self.is_zombie = False
+      self.infected = False
 
     # Zombies can't fortify.
     if self.is_zombie:
