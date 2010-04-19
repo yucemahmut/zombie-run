@@ -2,10 +2,6 @@ package net.peterd.zombierun.activity;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.google.android.maps.GeoPoint;
-import com.google.android.maps.MapView;
-import com.google.android.maps.Overlay;
-
 import net.peterd.zombierun.R;
 import net.peterd.zombierun.constants.Constants.GAME_MENU_OPTION;
 import net.peterd.zombierun.entity.Destination;
@@ -13,6 +9,7 @@ import net.peterd.zombierun.overlay.DestinationOverlay;
 import net.peterd.zombierun.service.HardwareManager;
 import net.peterd.zombierun.util.FloatingPointGeoPoint;
 import net.peterd.zombierun.util.GeoPointUtil;
+import net.peterd.zombierun.util.Log;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -20,9 +17,12 @@ import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.location.LocationListener;
 import android.os.Bundle;
-import net.peterd.zombierun.util.Log;
 import android.view.KeyEvent;
 import android.widget.TextView;
+
+import com.google.android.maps.GeoPoint;
+import com.google.android.maps.MapView;
+import com.google.android.maps.Overlay;
 
 public class StartGame extends BaseActivity {
 
@@ -30,12 +30,13 @@ public class StartGame extends BaseActivity {
    * Simply route to the first sub-activity.  This is defined here only so that we can have a
    * consistent entry-point to the start-game set of activities.
    */
+  @Override
   @SuppressWarnings("unchecked")
   public void onCreate(Bundle state) {
     super.onCreate(state);
-    
+
     Class startingClass = null;
-    
+
     HardwareManager hardware = new HardwareManager(this);
     hardware.initializeHardware();
     if (hardware.getLastKnownLocation() == null) {
@@ -43,12 +44,15 @@ public class StartGame extends BaseActivity {
     } else {
       startingClass = ShowingPickDestinationMessageActivity.class;
     }
-    
+
     Intent intent = new Intent(this, startingClass);
-    intent.putExtras(getIntent().getExtras());
+    Intent startedIntent = getIntent();
+    if (startedIntent != null) {
+      intent.putExtras(getIntent().getExtras());
+    }
     startActivity(intent);
   }
-  
+
   public static class BaseStartGameActivity extends GameMapActivity implements LocationListener {
     protected final AtomicReference<Destination> destinationReference =
         new AtomicReference<Destination>();
@@ -61,7 +65,7 @@ public class StartGame extends BaseActivity {
       menuOptions.add(GAME_MENU_OPTION.SATELLITE_VIEW);
       menuOptions.add(GAME_MENU_OPTION.STOP);
     }
-    
+
     protected boolean showAds() {
       return true;
     }
@@ -69,7 +73,7 @@ public class StartGame extends BaseActivity {
     @Override
     public void onCreate(Bundle state) {
       super.onCreate(state);
-      
+
       service.getHardwareManager().registerLocationListener(this);
 
       destinationDrawable = getResources().getDrawable(R.drawable.flag);
@@ -77,7 +81,7 @@ public class StartGame extends BaseActivity {
       destinationDrawable.setBounds(0, 0,
           destinationDrawable.getIntrinsicHeight(),
           destinationDrawable.getIntrinsicHeight());
-      
+
       if (state != null) {
         onRestoreInstanceState(state);
       }
@@ -90,11 +94,11 @@ public class StartGame extends BaseActivity {
           destinationReference.set(Destination.fromBundle(extras));
         }
       }
-      
+
       mapView.getOverlays().add(
           new DestinationOverlay(destinationReference, this.destinationDrawable));
     }
-    
+
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
       if (keyCode == KeyEvent.KEYCODE_BACK) {
@@ -103,7 +107,7 @@ public class StartGame extends BaseActivity {
       }
       return false;
     }
-    
+
     @Override
     public void onSaveInstanceState(Bundle state) {
       super.onSaveInstanceState(state);
@@ -120,7 +124,7 @@ public class StartGame extends BaseActivity {
       Log.i("ZombieRun.BaseStartGameActivity", "Getting Destination from activity bundle.");
       destinationReference.set(Destination.fromBundle(state));
     }
-    
+
     @Override
     public void startActivity(Intent intent) {
       Destination destination = destinationReference.get();
@@ -134,12 +138,12 @@ public class StartGame extends BaseActivity {
       service.shutDown();
       super.startActivity(intent);
     }
-    
+
     @Override
     public void onStop() {
       super.onStop();
     }
-    
+
     public void onLocationChanged(Location location) {
       currentLocation = location;
     }
@@ -150,34 +154,34 @@ public class StartGame extends BaseActivity {
   }
 
   public static class WaitingForFirstFixActivity extends BaseStartGameActivity {
-    
+
     @Override
     public void onCreate(Bundle state) {
       super.onCreate(state);
 
       // The Intent that will take us back to the main screen.
       final Intent cancelIntent = new Intent(this, Main.class);
-      
+
       TextView waitingForLocationDialogView = new TextView(this);
       String message = this.getString(R.string.waiting_for_location);
       waitingForLocationDialogView.setText(message);
       waitingForLocationDialogView.setPadding(5, 5, 5, 5);
-      
+
       new AlertDialog.Builder(this)
           .setView(waitingForLocationDialogView)
           .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface dialog, int which) {
-                  startActivity(cancelIntent); 
+                  startActivity(cancelIntent);
                 }
               })
           .setOnCancelListener(new DialogInterface.OnCancelListener() {
                 public void onCancel(DialogInterface dialog) {
-                  startActivity(cancelIntent); 
+                  startActivity(cancelIntent);
                 }
               })
           .show();
     }
-    
+
     @Override
     public void onLocationChanged(Location location) {
       super.onLocationChanged(location);
@@ -188,19 +192,19 @@ public class StartGame extends BaseActivity {
       }
     }
   }
-  
+
   public static class ShowingPickDestinationMessageActivity extends BaseStartGameActivity {
     @Override
     public void onCreate(Bundle state) {
       super.onCreate(state);
-      
+
       FloatingPointGeoPoint lastKnownLocation =
           service.getHardwareManager().getLastKnownLocation();
       if (lastKnownLocation != null) {
         mapView.getController().animateTo(lastKnownLocation.getGeoPoint());
         mapView.getController().setZoom(15);
       }
-      
+
       final Intent beginPickingDestinationIntent =
           new Intent(this, PickingDestinationActivity.class);
       new AlertDialog.Builder(this)
@@ -213,7 +217,7 @@ public class StartGame extends BaseActivity {
           .show();
     }
   }
-  
+
   public static class PickingDestinationActivity extends BaseStartGameActivity {
 
     @Override
@@ -221,17 +225,13 @@ public class StartGame extends BaseActivity {
       super.onCreate(state);
       mapView.getOverlays().add(new DestinationPickingOverlay(this));
     }
-    
+
     protected void destinationChosen(Destination destination) {
       destinationReference.set(destination);
-      
+
       final Intent startGameIntent;
-      if (gameSettings.getIsMultiplayerGame()) {
-        startGameIntent = new Intent(this, OwnedMultiPlayerGame.class);
-      } else {
-        startGameIntent = new Intent(this, SinglePlayerGame.class);
-      }
-      
+      startGameIntent = new Intent(this, SinglePlayerGame.class);
+
       new AlertDialog.Builder(this)
           .setMessage(R.string.message_confirm_destination)
           .setPositiveButton(getString(R.string.yes), new DialogInterface.OnClickListener() {
@@ -246,15 +246,15 @@ public class StartGame extends BaseActivity {
               })
           .show();
     }
-    
+
     private static class DestinationPickingOverlay extends Overlay {
-      
+
       private final PickingDestinationActivity activity;
-      
+
       public DestinationPickingOverlay(PickingDestinationActivity activity) {
         this.activity = activity;
       }
-      
+
       @Override
       public boolean onTap(GeoPoint point, MapView map) {
         super.onTap(point, map);
