@@ -528,6 +528,17 @@ var SimpleParagraphMessage = Class.create(AbstractMessage, {
   },
 });
 
+var WaitingForFirstFixMessage = Class.create(SimpleParagraphMessage, {
+  getSimpleMessage: function(ogs, ngs) {
+    return "Thank you for using the Zombie, Run! Zombie Finder!  We'll show " +
+    	"you your current location as soon as we get an accurate gps fix.  " +
+    	"Please be patient, this can take a few minutes, and works best if " +
+    	"you're outside with a clear view of the sky.";
+  },
+});
+// The above message is not actually dependent on the game state, so we don't
+// register it in the list of the Game's messages.
+
 var DestinationChosenMessage = Class.create(SimpleParagraphMessage, {
   getSimpleMessage: function(ogs, ngs) {
     return "Now, put your shoes on, get outside, and get to your " +
