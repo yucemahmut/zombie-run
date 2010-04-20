@@ -4,6 +4,7 @@ import pstats
 import StringIO
 import wsgiref.handlers
 
+from controllers import processing
 from controllers import site
 from controllers import api
 from google.appengine.api import users
@@ -11,6 +12,8 @@ from google.appengine.ext import webapp
 
 
 URL_BINDINGS = [
+                 ('/tasks/cleanup/tiles', processing.CleanupTileHandler),
+                 ('/tasks/cleanup/games', processing.CleanupGameHandler),
                  ('/join', site.JoinHandler),
                  ('/new', site.NewHandler),
                  ('/rpc/get', api.GetHandler),
