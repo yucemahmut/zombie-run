@@ -450,17 +450,21 @@ var ChooseDestinationMessage = Class.create(AbstractMessage, {
     
     // The following code is just a slightly complicated way of saying:
     // <p>Or, just <a href="#" onclick=...>tap on the map</a>.</p>
-    var click_p = document.createElement("p");
-    dom_node.appendChild(click_p);
-    click_p.appendChild(document.createTextNode("Or, just "));
+    //
+    // But it doesn't work very well right now, so let's just go with the
+    // dialog box.
+    //
+    // var click_p = document.createElement("p");
+    // dom_node.appendChild(click_p);
+    // click_p.appendChild(document.createTextNode("Or, just "));
     
-    var click_a = document.createElement("a");
-    click_p.appendChild(click_a);
-    click_a.setAttribute("href", "#");
-    click_a.onclick = this.dismiss_callback;
-    click_a.appendChild(document.createTextNode("tap on the map"));
+    // var click_a = document.createElement("a");
+    // click_p.appendChild(click_a);
+    // click_a.setAttribute("href", "#");
+    // click_a.onclick = this.dismiss_callback;
+    // click_a.appendChild(document.createTextNode("tap on the map"));
     
-    click_p.appendChild(document.createTextNode("."));
+    // click_p.appendChild(document.createTextNode("."));
   },
   
   processForm: function() {
