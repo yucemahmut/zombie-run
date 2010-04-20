@@ -42,10 +42,9 @@ class CleanupTileHandler(BaseCleanupHandler):
     query.filter("last_update_time < ", 
                  datetime.datetime.now() - MAX_DATASTORE_ENTITY_AGE)
     return query
-  
 
 
-class CleanupGameHandler(webapp.RequestHandler):
+class CleanupGameHandler(BaseCleanupHandler):
   
   def _GetTaskUrl(self):
     return "/tasks/cleanup/games"
