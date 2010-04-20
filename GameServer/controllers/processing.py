@@ -3,8 +3,10 @@ import logging
 
 from models import game
 
-from google.appengine.ext import webapp
+from google.appengine import runtime
 from google.appengine.api.labs import taskqueue
+from google.appengine.ext import db
+from google.appengine.ext import webapp
 
 
 MAX_DATASTORE_ENTITY_AGE = datetime.timedelta(7, 0, 0)
@@ -16,14 +18,12 @@ class BaseCleanupHandler(webapp.RequestHandler):
     self.post()
   
   def post(self):
-    deleted = False
-    for tile in self._GetQuery().fetch(1000):
-      deleted = True
-      tile.delete()
-      # logging.info("Deleted tile " % tile.Id())
-    if deleted:
-      task = taskqueue.Task(url=self._GetTaskUrl())
-      task.add(queue_name="cleanup")
+    entities = self._GetQuery().fetch(50)
+    if len(entities) == 0:
+      return
+    db.delete(entities)
+    task = taskqueue.Task(url=self._GetTaskUrl())
+    task.add(queue_name="cleanup")
   
   def _GetTaskUrl(self):
     raise Exception("Must implement.")

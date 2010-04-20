@@ -1,7 +1,7 @@
 cron:
 - description: daily tile cleanup
   url: /tasks/cleanup/tiles
-  schedule: every day 00:00
+  schedule: every 12 hours
 - description: daily game cleanup
   url: /tasks/cleanup/games
-  schedule: every day 00:00
+  schedule: every 12 hours
