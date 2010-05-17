@@ -13,6 +13,7 @@ from google.appengine.ext import webapp
 
 URL_BINDINGS = [
                  ('/tasks/cleanup/tiles', processing.CleanupTileHandler),
+                 ('/tasks/cleanup/nonce_tiles', processing.CleanupNonceTileHandler),
                  ('/tasks/cleanup/games', processing.CleanupGameHandler),
                  ('/join', site.JoinHandler),
                  ('/new', site.NewHandler),
