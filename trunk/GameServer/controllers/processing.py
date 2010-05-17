@@ -44,6 +44,17 @@ class CleanupTileHandler(BaseCleanupHandler):
     return query
 
 
+class CleanupNonceTileHandler(webapp.RequestHandler):
+
+  def _GetTaskUrl(self):
+    return "/tasks/cleanup/nonce_tiles"
+
+  def _GetQuery(self):
+    nonce_tile = game.GameTile.get_by_key_name("g1_gt-1")
+    if nonce_tile:
+      nonce_tile.delete()
+
+
 class CleanupGameHandler(BaseCleanupHandler):
   
   def _GetTaskUrl(self):
