@@ -54,5 +54,5 @@
 	<string name="no">No</string>
 <string name="start_multiplayer_button_text">Multiplayer Game! (beta)</string>
 <string name="web_game_url">http://game.zrli.org/</string>
-<string name="webgame_useragent">zr_android_15</string>
+<string name="webgame_useragent">zr_android_16</string>
 </resources>
