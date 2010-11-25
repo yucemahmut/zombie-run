@@ -20,7 +20,7 @@
   <string name="error_no_gps">No GPS Device Found.</string>
   <string name="error_gps_disabled">ZombieRun requires GPS-level location information.  Your GPS device is disabled.  Please enable your GPS receiver.</string>
   <string name="enable_gps">Enable GPS</string>
-  <string name="error_no_vibrator">Could not find phone vibrator.  Ack!  WTF!  I can't work in this environment.</string>
+  <string name="error_no_vibrator">Could not find phone vibrator.  Ack!  WTF!  I can\'t work in this environment.</string>
 
   <!-- Winning and losing strings -->
   <string name="message_win">Survival!</string>
